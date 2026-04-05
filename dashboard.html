@@ -485,14 +485,14 @@
 
   <script>
     const firebaseConfig = {
-  apiKey: "AIzaSyCT0aEche1SGWjS_pEn0MmLQH6OGdZ07cU",
-  authDomain: "devonte-cutz.firebaseapp.com",
-  projectId: "devonte-cutz",
-  storageBucket: "devonte-cutz.firebasestorage.app",
-  messagingSenderId: "345703317013",
-  appId: "1:345703317013:web:8b167d90841df86590d81c"
-};
-    
+      apiKey: "AIzaSyCT0aEche1SGWjS_pEn0MmLQH6OGdZ07cU",
+      authDomain: "devonte-cutz.firebaseapp.com",
+      projectId: "devonte-cutz",
+      storageBucket: "devonte-cutz.firebasestorage.app",
+      messagingSenderId: "345703317013",
+      appId: "1:345703317013:web:8b167d90841df86590d81c"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const storage = firebase.storage();
@@ -962,16 +962,31 @@
       }, 3000);
     }
 
+    // ========== ADMIN UID GUARD ==========
+    // Must match the same UID in index.html
+    const ADMIN_UID = "REPLACE_WITH_YOUR_ADMIN_UID";
+
     // ========== AUTH GUARD ==========
     firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        loadGallery();
-        showSection('reservationsPage');
-        loadReservations();
-        loadUnavailableDates();
-      } else {
+      if (!user) {
+        // Not signed in at all — back to index
         window.location.href = 'index.html';
+        return;
       }
+
+      if (user.uid !== ADMIN_UID) {
+        // Signed in but NOT the authorised admin — sign out and redirect
+        firebase.auth().signOut().then(() => {
+          window.location.href = 'index.html';
+        });
+        return;
+      }
+
+      // ✅ Verified admin — load dashboard
+      loadGallery();
+      showSection('reservationsPage');
+      loadReservations();
+      loadUnavailableDates();
     });
   </script>
 </body>
