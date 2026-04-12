@@ -917,6 +917,8 @@
 
       const unavailableSnapshot = await db.collection("unavailableDays").where("date", "==", date).get();
       let unavailableRanges = [];
+      // 2:00 PM – 3:30 PM is always blocked (off-time every day)
+      unavailableRanges.push({ start: 14 * 60, end: 15 * 60 + 30 }); // 840 – 930 minutes
       unavailableSnapshot.forEach(doc => {
         const data = doc.data();
         if (data.allDay) {
