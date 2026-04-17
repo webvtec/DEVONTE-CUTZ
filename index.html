@@ -557,33 +557,6 @@
       <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (45 mins)</option>
     </select>
 
-    <!-- Beard Services -->
-    <label for="beardType">Beard:</label>
-    <select id="beardType" onchange="showEstimateTime(); loadAvailableSlots();">
-      <option value="NONE">NONE</option>
-      <option value="Beard Trim">Beard Trim — $800</option>
-      <option value="Beard Shape Up">Beard Shape Up — $1,200</option>
-      <option value="Full Beard Design">Full Beard Design — $2,000</option>
-      <option value="Hot Towel Shave">Hot Towel Shave — $2,500</option>
-    </select>
-
-    <!-- Combo Services -->
-    <label for="comboType">Combo Services:</label>
-    <select id="comboType" onchange="showEstimateTime(); loadAvailableSlots();">
-      <option value="NONE">NONE</option>
-      <option value="Cut & Beard">Cut & Beard — $3,000</option>
-      <option value="Fade & Beard Design">Fade & Beard Design — $4,000</option>
-    </select>
-
-    <!-- Other Services -->
-    <label for="otherType">Other Services:</label>
-    <select id="otherType" onchange="showEstimateTime(); loadAvailableSlots();">
-      <option value="NONE">NONE</option>
-      <option value="Hair Wash">Hair Wash — $500</option>
-      <option value="Scalp Treatment">Scalp Treatment — $1,500</option>
-      <option value="Kid Package">Kid Package (Cut + Wash) — $2,000</option>
-    </select>
-
     <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
 
     <button type="submit">BOOK NOW ✂</button>
@@ -824,38 +797,21 @@
 
   function getSelectedServices() {
     const haircut = document.getElementById('haircutType')?.value || "NONE";
-    const beard = document.getElementById('beardType')?.value || "NONE";
-    const combo = document.getElementById('comboType')?.value || "NONE";
-    const other = document.getElementById('otherType')?.value || "NONE";
-
     let services = [];
-    [haircut, beard, combo, other].forEach(s => { if (s && s !== 'NONE') services.push(s); });
+    if (haircut && haircut !== 'NONE') services.push(haircut);
     return services.length > 0 ? services.join(', ') : 'No services selected';
   }
 
   function getSelectedServiceDuration() {
     const haircut = document.getElementById('haircutType').value;
-    const beard = document.getElementById('beardType').value;
-    const combo = document.getElementById('comboType').value;
-    const other = document.getElementById('otherType').value;
-
-    let totalDuration = 0;
-    [haircut, beard, combo, other].forEach(s => { if (s && s !== 'NONE') totalDuration += serviceDurations[s] || 0; });
-    return totalDuration || 30;
+    return (haircut && haircut !== 'NONE' ? serviceDurations[haircut] : 0) || 30;
   }
 
   function showEstimateTime() {
     const haircut = document.getElementById('haircutType').value;
-    const beard = document.getElementById('beardType').value;
-    const combo = document.getElementById('comboType').value;
-    const other = document.getElementById('otherType').value;
     const msg = document.getElementById('estimateTimeMessage');
-
-    if ([haircut, beard, combo, other].every(s => s === 'NONE')) { msg.innerHTML = ''; return; }
-
-    let total = 0;
-    [haircut, beard, combo, other].forEach(s => { if (s && s !== 'NONE') total += serviceDurations[s] || 0; });
-
+    if (!haircut || haircut === 'NONE') { msg.innerHTML = ''; return; }
+    const total = serviceDurations[haircut] || 0;
     if (total > 0) {
       const h = Math.floor(total / 60);
       const m = total % 60;
@@ -889,14 +845,11 @@
   async function loadAvailableSlots() {
     const date = document.getElementById('date').value;
     const haircut = document.getElementById('haircutType')?.value || "NONE";
-    const beard = document.getElementById('beardType')?.value || "NONE";
-    const combo = document.getElementById('comboType')?.value || "NONE";
-    const other = document.getElementById('otherType')?.value || "NONE";
 
     const timeSelect = document.getElementById('selectedTime');
     timeSelect.innerHTML = "<option value=''>-- Select a time --</option>";
 
-    const hasService = [haircut, beard, combo, other].some(s => s !== "NONE");
+    const hasService = haircut !== "NONE";
     if (!date || !hasService) {
       timeSelect.innerHTML = "<option value=''>COMPLETE FORM TO SEE AVAILABLE SLOTS</option>";
       return;
