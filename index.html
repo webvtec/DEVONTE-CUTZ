@@ -10,7 +10,7 @@
 <meta name="description" content="Jerome Celebrity Kutt – Professional barber offering precision fades, skin fades, beard work, kids cuts and special designs. Book your appointment today.">
 <meta name="keywords" content="Jerome Celebrity Kutt, Jerome barber, Jerome Celebrity Kutt Jamaica, celebrity barber Jamaica, barber Jamaica, fade haircut Jamaica, skin fade Jamaica, beard trim Jamaica, kids haircut Jamaica, book barber Jamaica, best barber Jamaica, Jerome barber shop">
 <meta name="author" content="Jerome Celebrity Kutt">
-<link rel="canonical" href="https://jeromecelebrityku.tt/">
+<link rel="canonical" href="https://jeromecelebritykutt.com/">
 <!-- Favicon -->
 <link rel="icon" type="image/png" sizes="32x32" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
 <link rel="icon" type="image/png" sizes="16x16" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
@@ -39,9 +39,17 @@
   "url": "https://jeromecelebritykutt.com",
   "description": "Professional barber offering precision fades, skin fades, beard work, kids cuts and special designs in Jamaica.",
   "image": "https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png",
+    "width": 512,
+    "height": 512
+  },
   "priceRange": "$$",
   "address": {
     "@type": "PostalAddress",
+    "streetAddress": "Shop 24, Pavilion Mall",
+    "addressLocality": "Half Way Tree",
     "addressCountry": "JM"
   },
   "sameAs": []
@@ -552,9 +560,10 @@
     <label for="haircutType">Haircut:</label>
     <select id="haircutType" onchange="showEstimateTime(); loadAvailableSlots();">
       <option value="NONE">NONE</option>
-      <option value="Regular Cut">Regular Cut — $2,500 (45 mins)</option>
-      <option value="Teenage Premium Cut">Teenage Premium Cut — $2,000 (45 mins, dye inclusive)</option>
-      <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (45 mins)</option>
+      <option value="Celebrity Premium Cut">Celebrity Premium Cut — $3,000 (40 mins)</option>
+      <option value="Celebrity Regular Cut">Celebrity Regular Cut — $2,500 (40 mins)</option>
+      <option value="Teenage Premium Cut">Teenage Premium Cut — $2,000 (40 mins, dye inclusive)</option>
+      <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (40 mins)</option>
     </select>
 
     <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
@@ -768,11 +777,11 @@
   // ========== BUSINESS HOURS ==========
   // Appointment days: Mon, Wed, Fri | Walk-in days: Tue, Thu, Sat | Closed: Sun
   const businessHours = {
-    'Monday': { open: '10:30 AM', close: '6:00 PM' },
+    'Monday': { open: '10:30 AM', close: '7:30 PM' },
     'Tuesday': null,   // Walk-in only — no online appointments
-    'Wednesday': { open: '10:30 AM', close: '6:00 PM' },
+    'Wednesday': { open: '10:30 AM', close: '7:30 PM' },
     'Thursday': null,  // Walk-in only — no online appointments
-    'Friday': { open: '10:30 AM', close: '6:00 PM' },
+    'Friday': { open: '10:30 AM', close: '7:30 PM' },
     'Saturday': null,  // Walk-in only — no online appointments
     'Sunday': null
   };
@@ -781,9 +790,10 @@
 
   // ========== SERVICE DURATIONS ==========
   const serviceDurations = {
-    "Regular Cut": 45,
-    "Teenage Premium Cut": 45,
-    "Kids Cut": 45,
+    "Celebrity Premium Cut": 40,
+    "Celebrity Regular Cut": 40,
+    "Teenage Premium Cut": 40,
+    "Kids Cut": 40,
     "Beard Trim": 20,
     "Beard Shape Up": 25,
     "Full Beard Design": 35,
@@ -882,8 +892,8 @@
 
       const unavailableSnapshot = await db.collection("unavailableDays").where("date", "==", date).get();
       let unavailableRanges = [];
-      // 2:00 PM – 3:30 PM is always blocked (off-time every day)
-      unavailableRanges.push({ start: 14 * 60, end: 15 * 60 + 30 }); // 840 – 930 minutes
+      // 1:30 PM – 3:00 PM is always blocked (break every day)
+      unavailableRanges.push({ start: 13 * 60 + 30, end: 15 * 60 }); // 810 – 900 minutes
       unavailableSnapshot.forEach(doc => {
         const data = doc.data();
         if (data.allDay) {
