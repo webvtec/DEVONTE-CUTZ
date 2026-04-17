@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
   <style>
     :root {
@@ -232,7 +233,41 @@
       margin-bottom: 0;
     }
 
-    .remove-btn:hover { background-color: #c62828; }
+    .gallery-grid .sortable-item {
+      position: relative;
+      cursor: grab;
+      touch-action: none;
+      border-radius: 8px;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .gallery-grid .sortable-item:active { cursor: grabbing; }
+
+    .gallery-grid .sortable-item.sortable-ghost {
+      opacity: 0.35;
+      transform: scale(0.97);
+    }
+
+    .gallery-grid .sortable-item.sortable-chosen {
+      box-shadow: 0 6px 20px rgba(200,168,75,0.45);
+      transform: scale(1.03);
+      z-index: 10;
+    }
+
+    .drag-handle {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.55);
+      color: #C8A84B;
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: grab;
+      z-index: 5;
+      user-select: none;
+    }
 
     /* ---- Table ---- */
     table { width: 100%; border-collapse: collapse; margin-top: 30px; }
@@ -585,7 +620,25 @@
       const fileName = `gallery/${timestamp}_${Math.random().toString(36).substring(2)}.${ext}`;
 
       const storageRef = storage.ref(fileName);
-      const uploadTask = storageRef.put(file);
+
+      // ---- Timeout guard: cancel after 90 seconds if stuck ----
+      let uploadTask = null;
+      const resetUploadUI = () => {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'ADD PHOTO';
+        progressDiv.style.display = 'none';
+        progressBar.value = 0;
+      };
+
+      const uploadTimeout = setTimeout(() => {
+        if (uploadTask) {
+          try { uploadTask.cancel(); } catch(e) {}
+        }
+        resetUploadUI();
+        showToast('⚠️ Upload timed out. Check your connection and try again.', false);
+      }, 90000);
+
+      uploadTask = storageRef.put(file);
 
       uploadTask.on('state_changed',
         (snapshot) => {
@@ -593,33 +646,38 @@
           progressBar.value = progress;
         },
         (error) => {
+          clearTimeout(uploadTimeout);
           console.error("Upload error:", error);
-          alert('Upload failed: ' + error.message);
-          uploadBtn.disabled = false;
-          uploadBtn.textContent = 'ADD PHOTO';
-          progressDiv.style.display = 'none';
+          let msg = 'Upload failed.';
+          if (error.code === 'storage/unauthorized') msg = 'Upload failed: Not authorised. Check Firebase Storage rules.';
+          else if (error.code === 'storage/canceled') msg = 'Upload cancelled.';
+          else if (error.code === 'storage/unknown') msg = 'Upload failed — network error. Please try again.';
+          else msg = 'Upload failed: ' + error.message;
+          showToast('❌ ' + msg, false);
+          resetUploadUI();
         },
         () => {
+          clearTimeout(uploadTimeout);
           // Upload complete — get download URL
           uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-            return db.collection('gallery').add({ url: downloadURL, category: category, uploadedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            return db.collection('gallery').add({
+              url: downloadURL,
+              category: category,
+              sortOrder: Date.now(),
+              uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
           }).then(() => {
             showToast('✅ Photo uploaded successfully!');
             // Reset form
             fileInput.value = '';
             document.getElementById('imagePreview').style.display = 'none';
             document.getElementById('imagePreview').src = '';
-            progressDiv.style.display = 'none';
-            progressBar.value = 0;
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'ADD PHOTO';
+            resetUploadUI();
             document.getElementById('uploadArea').querySelector('p').innerHTML = '<strong>Tap to choose a photo</strong><br>or drag and drop here';
           }).catch((error) => {
             console.error("Firestore error:", error);
-            alert('Error saving photo reference: ' + error.message);
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'ADD PHOTO';
-            progressDiv.style.display = 'none';
+            showToast('❌ Error saving photo reference: ' + error.message, false);
+            resetUploadUI();
           });
         }
       );
@@ -630,7 +688,7 @@
       const galleryContainer = document.getElementById('adminGallery');
       galleryContainer.innerHTML = '';
 
-      db.collection('gallery').orderBy('uploadedAt', 'desc').onSnapshot((querySnapshot) => {
+      db.collection('gallery').orderBy('sortOrder', 'asc').onSnapshot((querySnapshot) => {
         galleryContainer.innerHTML = '';
 
         if (querySnapshot.empty) {
@@ -644,29 +702,58 @@
           const data = doc.data();
           const imageUrl = data.url;
           const category = data.category || 'Uncategorized';
-
           if (!categories[category]) categories[category] = [];
-          categories[category].push({ imageUrl, docId: doc.id });
+          categories[category].push({ imageUrl, docId: doc.id, sortOrder: data.sortOrder || 0 });
         });
 
+        // Sort by sortOrder within each category (already ordered from query but keep consistent)
+        for (const cat in categories) {
+          categories[cat].sort((a, b) => a.sortOrder - b.sortOrder);
+        }
+
         for (const category in categories) {
+          const catId = `gallery-${category.replace(/\s+/g,'-')}`;
           galleryContainer.innerHTML += `
             <div class="gallery-category">
               <h3>${category}</h3>
+              <p style="text-align:center;font-size:12px;color:#999;margin:-8px 0 10px;font-style:italic;">✋ Hold & drag to reorder</p>
               <div class="gallery-wrapper">
-                <div class="gallery-grid" id="gallery-${category.replace(/\s+/g,'-')}"></div>
+                <div class="gallery-grid" id="${catId}"></div>
               </div>
             </div>
           `;
 
-          const categoryContainer = document.getElementById(`gallery-${category.replace(/\s+/g,'-')}`);
+          const categoryContainer = document.getElementById(catId);
           categories[category].forEach(item => {
-            categoryContainer.innerHTML += `
-              <div>
-                <img src="${item.imageUrl}" alt="Cut">
-                <button class="remove-btn" onclick="removePhoto('${item.docId}')">✕ Remove</button>
-              </div>
+            const div = document.createElement('div');
+            div.className = 'sortable-item';
+            div.dataset.docId = item.docId;
+            div.innerHTML = `
+              <div class="drag-handle" title="Drag to reorder">⠿</div>
+              <img src="${item.imageUrl}" alt="Cut" style="width:100%;height:250px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+              <button class="remove-btn" onclick="removePhoto('${item.docId}')">✕ Remove</button>
             `;
+            categoryContainer.appendChild(div);
+          });
+
+          // Init SortableJS on this category grid
+          Sortable.create(categoryContainer, {
+            animation: 180,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function(evt) {
+              // Get all items in new order and update sortOrder in Firestore
+              const items = categoryContainer.querySelectorAll('.sortable-item');
+              const batch = db.batch();
+              items.forEach((item, index) => {
+                const docId = item.dataset.docId;
+                batch.update(db.collection('gallery').doc(docId), { sortOrder: index });
+              });
+              batch.commit()
+                .then(() => showToast('✅ Photo order saved.'))
+                .catch(err => showToast('❌ Failed to save order: ' + err.message, false));
+            }
           });
         }
       });
@@ -728,7 +815,7 @@
                 <div class="reservation-header">
                   <h3>${booking.name}</h3>
                   <div style="display:flex; gap:6px; align-items:center;">
-                    ${isCancelled ? `<span class="badge" style="background:#e53935;">CANCELLED</span>` : `<span class="badge ${badgeClass}">${title}</span>`}
+                  ${isCancelled ? `<span class="badge" style="background:#e53935;">CANCELLED BY ${(booking.cancelledBy === 'client' ? 'CLIENT' : 'ADMIN')}</span>` : `<span class="badge ${badgeClass}">${title}</span>`}
                   </div>
                 </div>
                 <p style="font-size:14px; margin:4px 0;"><strong>Booking #:</strong> ${booking.bookingNumber || "N/A"}</p>
@@ -739,7 +826,9 @@
                 <p style="font-size:14px; margin:4px 0;"><strong>💵 Payment:</strong> ${booking.deposit || "No"}</p>
                 <p style="font-size:14px; margin:4px 0;"><strong>Status:</strong>
                   <span class="${booking.status === 'Completed' ? 'status-completed' : booking.status === 'Cancelled' ? 'status-not' : booking.status === 'Not Completed' ? 'status-not' : 'status-none'}">
-                    ${booking.status || "Not Set"}
+                    ${booking.status === 'Cancelled'
+                      ? `Cancelled by ${booking.cancelledBy === 'client' ? 'Client' : 'Admin'}`
+                      : booking.status || "Not Set"}
                   </span>
                 </p>
                 <div class="action-buttons">
@@ -826,7 +915,7 @@
     function confirmAdminCancel() {
       const orderId = document.getElementById('adminCancelBookingId').value;
       if (!orderId) return;
-      db.collection("bookings").doc(orderId).update({ status: 'Cancelled' })
+      db.collection("bookings").doc(orderId).update({ status: 'Cancelled', cancelledBy: 'admin' })
         .then(() => { closeAdminCancelModal(); showToast('🗑 Booking cancelled.'); })
         .catch(err => { closeAdminCancelModal(); alert("Failed to cancel: " + err.message); });
     }
