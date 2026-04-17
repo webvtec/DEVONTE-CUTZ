@@ -9,6 +9,22 @@
   <link rel="shortcut icon" type="image/png" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
   <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
 
+  <!-- Crawling & Indexing -->
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://jeromecelebritykutt.com/dashboard.html">
+  <meta property="og:title" content="Jerome Celebrity Kutt – Admin Dashboard">
+  <meta property="og:description" content="Admin dashboard for Jerome Celebrity Kutt barber booking system.">
+  <meta property="og:image" content="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:site_name" content="Jerome Celebrity Kutt">
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Jerome Celebrity Kutt – Admin">
+  <meta name="twitter:image" content="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
+
   <!-- Firebase Modular SDK (no eval — CSP safe) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -120,17 +136,24 @@
             progressDiv.style.display = 'none';
           },
           async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            await addDoc(collection(db, 'gallery'), { url: downloadURL, category, uploadedAt: serverTimestamp() });
-            showToast('✅ Photo uploaded successfully!');
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const photoCount = await getDocs(collection(db, 'gallery')).then(s => s.size);
+              await addDoc(collection(db, 'gallery'), { url: downloadURL, category, order: photoCount, uploadedAt: serverTimestamp() });
+              showToast('✅ Photo uploaded successfully!');
+            } catch(saveErr) {
+              console.error("Save error:", saveErr);
+              alert('Upload succeeded but failed to save: ' + saveErr.message);
+            }
             fileInput.value = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('imagePreview').src = '';
+            const preview = document.getElementById('imagePreview');
+            if (preview) { preview.style.display = 'none'; preview.src = ''; }
             progressDiv.style.display = 'none';
             progressBar.value = 0;
             uploadBtn.disabled = false;
             uploadBtn.textContent = 'ADD PHOTO';
-            document.getElementById('uploadArea').querySelector('p').innerHTML = '<strong>Tap to choose a photo</strong><br>or drag and drop here';
+            const uploadAreaP = document.getElementById('uploadArea')?.querySelector('p');
+            if (uploadAreaP) uploadAreaP.innerHTML = '<strong>Tap to choose a photo</strong><br>or drag and drop here';
           }
         );
       } catch (err) {
@@ -147,7 +170,7 @@
     function loadGallery() {
       const galleryContainer = document.getElementById('adminGallery');
       galleryContainer.innerHTML = '';
-      const q = query(collection(db, 'gallery'), orderBy('uploadedAt', 'desc'));
+      const q = query(collection(db, 'gallery'), orderBy('order', 'asc'));
       onSnapshot(q, (querySnapshot) => {
         galleryContainer.innerHTML = '';
         if (querySnapshot.empty) {
@@ -159,19 +182,62 @@
           const data = docSnap.data();
           const category = data.category || 'Uncategorized';
           if (!categories[category]) categories[category] = [];
-          categories[category].push({ imageUrl: data.url, docId: docSnap.id });
+          categories[category].push({ imageUrl: data.url, docId: docSnap.id, order: data.order ?? 9999 });
         });
         for (const category in categories) {
           const catId = `gallery-${category.replace(/\s+/g,'-')}`;
           const div = document.createElement('div');
           div.className = 'gallery-category';
-          div.innerHTML = `<h3>${category}</h3><div class="gallery-wrapper"><div class="gallery-grid" id="${catId}"></div></div>`;
+          div.innerHTML = `<h3>${category}</h3><p style="font-size:12px;color:#888;text-align:center;margin:-6px 0 8px;">Hold & drag photos to reorder</p><div class="gallery-wrapper"><div class="gallery-grid" id="${catId}"></div></div>`;
           galleryContainer.appendChild(div);
           const grid = document.getElementById(catId);
+          grid.setAttribute('data-category', category);
+
           categories[category].forEach(item => {
             const cell = document.createElement('div');
+            cell.setAttribute('draggable', 'true');
+            cell.setAttribute('data-id', item.docId);
+            cell.style.cursor = 'grab';
             cell.innerHTML = `<img src="${item.imageUrl}" alt="${category} cut"><button class="remove-btn" data-id="${item.docId}">✕ Remove</button>`;
             cell.querySelector('.remove-btn').addEventListener('click', () => removePhoto(item.docId));
+
+            // Drag events
+            cell.addEventListener('dragstart', (e) => {
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', item.docId);
+              cell.style.opacity = '0.4';
+              cell.style.border = '2px dashed var(--accent)';
+            });
+            cell.addEventListener('dragend', () => {
+              cell.style.opacity = '1';
+              cell.style.border = '';
+            });
+            cell.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              cell.style.borderTop = '3px solid var(--accent)';
+            });
+            cell.addEventListener('dragleave', () => {
+              cell.style.borderTop = '';
+            });
+            cell.addEventListener('drop', async (e) => {
+              e.preventDefault();
+              cell.style.borderTop = '';
+              const draggedId = e.dataTransfer.getData('text/plain');
+              const draggedEl = grid.querySelector(`[data-id="${draggedId}"]`);
+              if (draggedEl && draggedEl !== cell) {
+                grid.insertBefore(draggedEl, cell);
+                // Save new order to Firestore
+                const cells = [...grid.querySelectorAll('[data-id]')];
+                const batch = writeBatch(db);
+                cells.forEach((c, idx) => {
+                  batch.update(doc(db, 'gallery', c.getAttribute('data-id')), { order: idx });
+                });
+                try { await batch.commit(); showToast('✅ Order saved!'); }
+                catch(err) { console.error('Order save failed:', err); showToast('❌ Failed to save order.', false); }
+              }
+            });
+
             grid.appendChild(cell);
           });
         }
@@ -256,8 +322,10 @@
               <p style="font-size:14px;margin:4px 0;"><strong>Service:</strong> ${booking.service}</p>
               <p style="font-size:14px;margin:4px 0;"><strong>💵 Payment:</strong> ${booking.deposit || "No"}</p>
               <p style="font-size:14px;margin:4px 0;"><strong>Status:</strong>
-                <span class="${booking.status === 'Completed' ? 'status-completed' : booking.status === 'Not Completed' ? 'status-not' : 'status-none'}">
-                  ${booking.status || "Not Set"}
+                <span class="${booking.status === 'Completed' ? 'status-completed' : booking.status === 'Not Completed' ? 'status-not' : booking.status === 'Cancelled' ? 'status-cancelled' : 'status-none'}">
+                  ${booking.status === 'Cancelled'
+                    ? `CANCELLED BY ${(booking.cancelledBy || 'admin').toUpperCase()}`
+                    : (booking.status || "Not Set")}
                 </span>
               </p>
               <div class="action-buttons">
@@ -323,8 +391,8 @@
 
     function cancelReservation(orderId) {
       if (!confirm("Are you sure you want to cancel this booking?")) return;
-      deleteDoc(doc(db, "bookings", orderId))
-        .then(() => showToast('🗑 Reservation cancelled.'))
+      updateDoc(doc(db, "bookings", orderId), { status: 'Cancelled', cancelledBy: 'admin' })
+        .then(() => showToast('🗑 Reservation cancelled by admin.'))
         .catch(err => alert("Failed to cancel: " + err.message));
     }
 
@@ -887,6 +955,7 @@
     .status-completed { color: green; font-weight: bold; }
     .status-not { color: red; font-weight: bold; }
     .status-none { color: gray; font-style: italic; }
+    .status-cancelled { color: #b71c1c; font-weight: bold; background: #ffebee; padding: 2px 8px; border-radius: 4px; font-size: 13px; }
 
     label {
       font-size: 13px;

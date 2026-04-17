@@ -1304,16 +1304,22 @@
 
           let cleanService = b.service || "";
           const depositStatus = b.deposit === "Made" || b.deposit === "Yes";
+          const isCancelled = b.status === 'Cancelled';
+          const cancelledByLabel = isCancelled
+            ? `CANCELLED BY ${(b.cancelledBy || 'admin').toUpperCase()}`
+            : null;
 
           bookingsHTML += `
-            <div style="border:1px solid #ddd; border-radius:10px; padding:14px; margin-bottom:14px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.08); border-left:4px solid var(--accent); color:#000;">
+            <div style="border:1px solid #ddd; border-radius:10px; padding:14px; margin-bottom:14px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.08); border-left:4px solid ${isCancelled ? '#b71c1c' : 'var(--accent)'}; color:#000; opacity:${isCancelled ? '0.85' : '1'};">
               <h3 style="margin-top:0; color:#000; font-size:17px; font-family:'Bebas Neue',cursive; letter-spacing:1px;">Booking #: ${b.bookingNumber || "N/A"}</h3>
+              ${isCancelled ? `<p style="margin:0 0 8px; font-size:13px; font-weight:bold; color:#b71c1c; background:#ffebee; padding:4px 8px; border-radius:4px; display:inline-block;">⛔ ${cancelledByLabel}</p>` : ''}
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>👤 Name:</strong> ${b.name || "N/A"}</p>
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📞 Phone:</strong> ${b.phone || "N/A"}</p>
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📅 Date:</strong> ${bookingDate}</p>
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>⏰ Time:</strong> ${b.time || "N/A"}</p>
               ${cleanService ? `<p style="margin:4px 0; font-size:14px; color:#000;"><strong>✂ Services:</strong> ${cleanService}</p>` : ''}
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>💵 Payment:</strong> <span style="color:${depositStatus ? 'green' : 'red'}; font-weight:bold;">${depositStatus ? 'Confirmed' : 'Pending'}</span></p>
+              ${!isCancelled ? `<button onclick="clientCancelBooking('${b.id}')" style="margin-top:10px;background:#e53935;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:bold;font-family:'Barlow',sans-serif;font-size:13px;">Cancel Booking</button>` : ''}
             </div>
           `;
         });
@@ -1333,6 +1339,15 @@
       window.bookingsUnsubscribe();
       window.bookingsUnsubscribe = null;
     }
+  }
+
+  function clientCancelBooking(bookingId) {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    const user = firebase.auth().currentUser;
+    if (!user) { window.location.href = 'login.html'; return; }
+    db.collection('bookings').doc(bookingId).update({ status: 'Cancelled', cancelledBy: 'client' })
+      .then(() => alert('Your booking has been cancelled.'))
+      .catch(err => alert('Failed to cancel: ' + err.message));
   }
 
   // ========== PHONE FORMAT ==========
