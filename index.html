@@ -558,13 +558,17 @@
 
     <!-- Haircut Services -->
     <label for="haircutType">Haircut:</label>
-    <select id="haircutType" onchange="showEstimateTime(); loadAvailableSlots();">
+    <select id="haircutType" onchange="showEstimateTime(); loadAvailableSlots(); showServiceIncludes();">
       <option value="NONE">NONE</option>
       <option value="Celebrity Premium Cut">Celebrity Premium Cut — $3,000 (40 mins)</option>
       <option value="Celebrity Regular Cut">Celebrity Regular Cut — $2,500 (40 mins)</option>
       <option value="Teenage Premium Cut">Teenage Premium Cut — $2,000 (40 mins, dye inclusive)</option>
       <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (40 mins)</option>
+      <option value="Big Chop Transformation">Big Chop Transformation — $3,500 (40 mins)</option>
     </select>
+
+    <!-- Service Includes Card -->
+    <div id="serviceIncludesCard" style="display:none; margin-bottom:14px; border-radius:8px; overflow:hidden; border:1px solid var(--accent); background:#1e1e1e;"></div>
 
     <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
 
@@ -809,7 +813,8 @@
     "Fade & Beard Design": 75,
     "Hair Wash": 15,
     "Scalp Treatment": 30,
-    "Kid Package": 40
+    "Kid Package": 40,
+    "Big Chop Transformation": 40
   };
 
   function getSelectedServices() {
@@ -837,6 +842,62 @@
       if (m) { if (str) str += ' and '; str += `${m} minute${m > 1 ? 's' : ''}`; }
       msg.innerHTML = `⏱ Estimated Duration: ~${str}`;
     }
+  }
+
+  // ========== SERVICE INCLUDES ==========
+  const serviceIncludes = {
+    "Celebrity Premium Cut": {
+      icon: "✂",
+      color: "#C8A84B",
+      items: ["Full Fade", "Dye Inclusive", "Eyebrow Trim"]
+    },
+    "Celebrity Regular Cut": {
+      icon: "✂",
+      color: "#C8A84B",
+      items: ["Taper Fade", "Regular Cut", "Dye Only"]
+    },
+    "Teenage Premium Cut": {
+      icon: "✂",
+      color: "#C8A84B",
+      items: ["Full Fade", "Dye Inclusive"]
+    },
+    "Kids Cut": {
+      icon: "✂",
+      color: "#C8A84B",
+      items: ["Age 3–12", "Clean & Neat Cut", "Kid-Friendly Service"]
+    },
+    "Big Chop Transformation": {
+      icon: "✂",
+      color: "#C8A84B",
+      items: ["Full Hair Transformation", "Big Chop Style", "Personalised Consultation"]
+    }
+  };
+
+  function showServiceIncludes() {
+    const haircut = document.getElementById('haircutType').value;
+    const card = document.getElementById('serviceIncludesCard');
+    if (!haircut || haircut === 'NONE' || !serviceIncludes[haircut]) {
+      card.style.display = 'none';
+      card.innerHTML = '';
+      return;
+    }
+    const info = serviceIncludes[haircut];
+    const itemsHTML = info.items.map(item => `
+      <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(200,168,75,0.1);">
+        <span style="width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; display:inline-block;"></span>
+        <span style="font-size:14px; color:#e0e0e0; font-family:'Barlow',sans-serif;">${item}</span>
+      </div>
+    `).join('');
+    card.innerHTML = `
+      <div style="background:var(--accent); padding:9px 14px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:16px;">${info.icon}</span>
+        <span style="font-family:'Bebas Neue',cursive; letter-spacing:2px; font-size:15px; color:#1a1a1a;">INCLUDES</span>
+      </div>
+      <div style="padding:10px 14px 4px;">
+        ${itemsHTML}
+      </div>
+    `;
+    card.style.display = 'block';
   }
 
   // ========== TIME UTILS ==========
