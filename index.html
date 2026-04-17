@@ -728,7 +728,7 @@
     const galleryContainer = document.getElementById(containerId);
     galleryContainer.innerHTML = '';
 
-    db.collection('gallery').orderBy('sortOrder', 'asc').onSnapshot((querySnapshot) => {
+    db.collection('gallery').orderBy('uploadedAt', 'desc').onSnapshot((querySnapshot) => {
       galleryContainer.innerHTML = '';
       const categories = {};
 
@@ -1305,9 +1305,8 @@
           let cleanService = b.service || "";
           const depositStatus = b.deposit === "Made" || b.deposit === "Yes";
 
-          const isCancelled = b.status === 'Cancelled';
           bookingsHTML += `
-            <div style="border:1px solid #ddd; border-radius:10px; padding:14px; margin-bottom:14px; background:${isCancelled ? '#fff5f5' : 'white'}; box-shadow:0 2px 5px rgba(0,0,0,0.08); border-left:4px solid ${isCancelled ? '#e53935' : 'var(--accent)'}; color:#000;">
+            <div style="border:1px solid #ddd; border-radius:10px; padding:14px; margin-bottom:14px; background:white; box-shadow:0 2px 5px rgba(0,0,0,0.08); border-left:4px solid var(--accent); color:#000;">
               <h3 style="margin-top:0; color:#000; font-size:17px; font-family:'Bebas Neue',cursive; letter-spacing:1px;">Booking #: ${b.bookingNumber || "N/A"}</h3>
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>👤 Name:</strong> ${b.name || "N/A"}</p>
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📞 Phone:</strong> ${b.phone || "N/A"}</p>
@@ -1315,13 +1314,6 @@
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>⏰ Time:</strong> ${b.time || "N/A"}</p>
               ${cleanService ? `<p style="margin:4px 0; font-size:14px; color:#000;"><strong>✂ Services:</strong> ${cleanService}</p>` : ''}
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>💵 Payment:</strong> <span style="color:${depositStatus ? 'green' : 'red'}; font-weight:bold;">${depositStatus ? 'Confirmed' : 'Pending'}</span></p>
-              <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📌 Status:</strong> <span style="color:${isCancelled ? '#e53935' : '#2e7d32'}; font-weight:bold;">${isCancelled ? `❌ Cancelled by ${b.cancelledBy === 'admin' ? 'Admin' : 'You'}` : '✅ Active'}</span></p>
-              ${!isCancelled ? `
-              <button onclick="cancelUserBooking('${b.id}', '${b.bookingNumber || 'N/A'}')" style="margin-top:10px; width:100%; padding:10px; background:#e53935; color:white; border:none; border-radius:6px; cursor:pointer; font-family:'Barlow',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.5px; transition:background 0.2s;" onmouseover="this.style.background='#c62828'" onmouseout="this.style.background='#e53935'">
-                ✕ CANCEL BOOKING
-              </button>` : `
-              <p style="margin-top:10px; text-align:center; font-size:13px; color:#e53935; font-style:italic;">This booking has been cancelled.</p>
-              `}
             </div>
           `;
         });
@@ -1341,42 +1333,6 @@
       window.bookingsUnsubscribe();
       window.bookingsUnsubscribe = null;
     }
-  }
-
-  // ========== CANCEL USER BOOKING ==========
-  function cancelUserBooking(bookingId, bookingNumber) {
-    const user = firebase.auth().currentUser;
-    if (!user) { window.location.href = 'login.html'; return; }
-
-    Swal.fire({
-      title: 'Cancel Booking?',
-      html: `<p style="font-family:'Barlow',sans-serif; color:#555; font-size:15px;">Are you sure you want to cancel <strong>Booking #${bookingNumber}</strong>?<br><br>This cannot be undone.</p>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#e53935',
-      cancelButtonColor: '#888',
-      confirmButtonText: 'Yes, Cancel It',
-      cancelButtonText: 'Keep Booking',
-      reverseButtons: true
-    }).then((result) => {
-      if (!result.isConfirmed) return;
-
-      db.collection('bookings').doc(bookingId).get().then(doc => {
-        if (!doc.exists) { Swal.fire('Not Found', 'Booking could not be found.', 'error'); return; }
-        if (doc.data().uid !== user.uid) { Swal.fire('Denied', 'You can only cancel your own bookings.', 'error'); return; }
-
-        db.collection('bookings').doc(bookingId).update({ status: 'Cancelled', cancelledBy: 'client' })
-          .then(() => {
-            Swal.fire({
-              title: 'Booking Cancelled',
-              text: 'Booking #' + bookingNumber + ' has been cancelled.',
-              icon: 'success',
-              confirmButtonColor: '#C8A84B'
-            });
-          })
-          .catch(err => Swal.fire('Error', 'Failed to cancel booking: ' + err.message, 'error'));
-      }).catch(err => Swal.fire('Error', err.message, 'error'));
-    });
   }
 
   // ========== PHONE FORMAT ==========
