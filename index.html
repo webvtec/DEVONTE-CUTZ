@@ -459,8 +459,10 @@
   <a onclick="showSection('reviewsSection'); closeMenu();">⭐ REVIEWS</a>
 
   <div class="opening-hours">
-    <h3>HOURS:</h3>
-    <p>Mon – Sat: 10:30 AM – 6:00 PM</p>
+    <h3>APPOINTMENTS:</h3>
+    <p>Mon, Wed, Fri: 10:30 AM – 6:00 PM</p>
+    <h3 style="margin-top:6px;">WALK-INS:</h3>
+    <p>Tue, Thu, Sat: 10:30 AM – 6:00 PM</p>
     <p>Sunday: Closed</p>
   </div>
 
@@ -525,6 +527,12 @@
 <!-- Booking Section -->
 <div class="content-section" id="bookingSection">
   <h1>BOOK YOUR CUT</h1>
+  <div style="max-width:420px; margin:0 auto 16px; background:#1a1a1a; border-left:4px solid var(--accent); border-radius:6px; padding:12px 16px; font-size:13px; color:#ccc; line-height:1.6;">
+    📅 <strong style="color:var(--accent);">Appointments:</strong> Mondays, Wednesdays &amp; Fridays only<br>
+    🚶 <strong style="color:var(--accent);">Walk-ins:</strong> Tuesdays, Thursdays &amp; Saturdays<br>
+    ⛔ No line-ups on appointment days<br>
+    ⏱ <strong style="color:#e74c3c;">10-minute grace period</strong> — late arrivals lose their spot
+  </div>
   <form onsubmit="submitBooking(event)">
     <label for="name">Name:</label>
     <input id="name" required type="text" placeholder="Your full name"/>
@@ -544,11 +552,9 @@
     <label for="haircutType">Haircut:</label>
     <select id="haircutType" onchange="showEstimateTime(); loadAvailableSlots();">
       <option value="NONE">NONE</option>
-      <option value="Regular Cut">Regular Cut — $1,500</option>
-      <option value="Fade">Fade — $2,000</option>
-      <option value="Skin Fade">Skin Fade — $2,500</option>
-      <option value="Shape Up">Shape Up — $1,000</option>
-      <option value="Kids Cut">Kids Cut — $1,200</option>
+      <option value="Regular Cut">Regular Cut — $2,500 (45 mins)</option>
+      <option value="Teenage Premium Cut">Teenage Premium Cut — $2,000 (45 mins, dye inclusive)</option>
+      <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (45 mins)</option>
     </select>
 
     <!-- Beard Services -->
@@ -787,23 +793,24 @@
   });
 
   // ========== BUSINESS HOURS ==========
+  // Appointment days: Mon, Wed, Fri | Walk-in days: Tue, Thu, Sat | Closed: Sun
   const businessHours = {
     'Monday': { open: '10:30 AM', close: '6:00 PM' },
-    'Tuesday': null,
+    'Tuesday': null,   // Walk-in only — no online appointments
     'Wednesday': { open: '10:30 AM', close: '6:00 PM' },
-    'Thursday': { open: '10:30 AM', close: '6:00 PM' },
+    'Thursday': null,  // Walk-in only — no online appointments
     'Friday': { open: '10:30 AM', close: '6:00 PM' },
-    'Saturday': { open: '10:30 AM', close: '6:00 PM' },
+    'Saturday': null,  // Walk-in only — no online appointments
     'Sunday': null
   };
 
+  const walkInDays = ['Tuesday', 'Thursday', 'Saturday'];
+
   // ========== SERVICE DURATIONS ==========
   const serviceDurations = {
-    "Regular Cut": 30,
-    "Fade": 45,
-    "Skin Fade": 50,
-    "Shape Up": 20,
-    "Kids Cut": 25,
+    "Regular Cut": 45,
+    "Teenage Premium Cut": 45,
+    "Kids Cut": 45,
     "Beard Trim": 20,
     "Beard Shape Up": 25,
     "Full Beard Design": 35,
@@ -899,6 +906,11 @@
     const dayName = new Date(date + "T00:00:00").toLocaleDateString('en-US', { weekday: 'long' });
     const business = businessHours[dayName];
 
+    if (walkInDays.includes(dayName)) {
+      timeSelect.innerHTML = "<option value=''>Walk-ins only on " + dayName + "s — no online booking</option>";
+      return;
+    }
+
     if (!business) {
       timeSelect.innerHTML = "<option value=''>Closed this day</option>";
       return;
@@ -979,6 +991,11 @@
   function validateTimeSlot(date, selectedTime) {
     const dayName = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
     const business = businessHours[dayName];
+
+    if (walkInDays.includes(dayName)) {
+      alert(`${dayName} is a walk-in only day. Appointments are on Mondays, Wednesdays, and Fridays.`);
+      return Promise.resolve(false);
+    }
 
     if (!business) {
       alert(`We are closed on ${dayName}s. Please select another day.`);
