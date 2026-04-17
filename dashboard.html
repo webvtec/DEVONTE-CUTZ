@@ -9,11 +9,548 @@
   <link rel="shortcut icon" type="image/png" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
   <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dqqr9udcs/image/upload/v1775954819/JEROME_CELEBRITY_KUTT_LOGO_t7jikx.png">
 
-  <!-- Firebase Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <!-- Firebase Modular SDK (no eval — CSP safe) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, orderBy, where, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD837JBOi4EdywnaPAmCS1krL9HLHy90CI",
+      authDomain: "jerome-celebrity-kutt.firebaseapp.com",
+      projectId: "jerome-celebrity-kutt",
+      storageBucket: "jerome-celebrity-kutt.firebasestorage.app",
+      messagingSenderId: "43174384691",
+      appId: "1:43174384691:web:9509d2f7a1e4393306ff46"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+
+    // ========== SECTION TOGGLE ==========
+    function showSection(sectionId) {
+      document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+    }
+    window.showSection = showSection;
+
+    function toggleTimeInputs() {
+      const isAllDay = document.getElementById('allDayCheckbox').checked;
+      document.getElementById('timeInputs').style.display = isAllDay ? 'none' : 'block';
+    }
+    window.toggleTimeInputs = toggleTimeInputs;
+
+    // ========== DEVICE UPLOAD ==========
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const preview = document.getElementById('imagePreview');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      const uploadArea = document.getElementById('uploadArea');
+      uploadArea.querySelector('p').innerHTML = `<strong>${file.name}</strong><br><span style="color:#888;">Ready to upload</span>`;
+    }
+    window.previewImage = previewImage;
+
+    // Convert HEIC/HEIF to JPEG (fixes iPhone upload blocks)
+    async function normaliseFile(file) {
+      const heicTypes = ['image/heic', 'image/heif'];
+      if (!heicTypes.includes(file.type.toLowerCase()) && !file.name.toLowerCase().endsWith('.heic') && !file.name.toLowerCase().endsWith('.heif')) {
+        return file; // already fine
+      }
+      // Draw onto canvas and export as JPEG
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(blob => {
+            resolve(new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.92);
+        };
+        img.src = url;
+      });
+    }
+
+    async function uploadPhoto() {
+      const fileInput = document.getElementById('photoFileInput');
+      const categorySelect = document.getElementById('photoCategorySelect');
+      const category = categorySelect.value.trim();
+      let file = fileInput.files[0];
+
+      if (!file) { alert('Please select a photo from your device first.'); return; }
+      if (!category) { alert('Please select a category.'); return; }
+
+      const uploadBtn = document.getElementById('uploadBtn');
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'UPLOADING...';
+
+      const progressDiv = document.getElementById('uploadProgress');
+      const progressBar = document.getElementById('progressBar');
+      progressDiv.style.display = 'block';
+
+      try {
+        file = await normaliseFile(file); // convert HEIC → JPEG if needed
+        const timestamp = Date.now();
+        const ext = file.name.split('.').pop();
+        const fileName = `gallery/${timestamp}_${Math.random().toString(36).substring(2)}.${ext}`;
+        const storageRef = ref(storage, fileName);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            progressBar.value = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            alert('Upload failed: ' + error.message);
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'ADD PHOTO';
+            progressDiv.style.display = 'none';
+          },
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, 'gallery'), { url: downloadURL, category, uploadedAt: serverTimestamp() });
+            showToast('✅ Photo uploaded successfully!');
+            fileInput.value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('imagePreview').src = '';
+            progressDiv.style.display = 'none';
+            progressBar.value = 0;
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'ADD PHOTO';
+            document.getElementById('uploadArea').querySelector('p').innerHTML = '<strong>Tap to choose a photo</strong><br>or drag and drop here';
+          }
+        );
+      } catch (err) {
+        console.error(err);
+        alert('Upload failed: ' + err.message);
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'ADD PHOTO';
+        progressDiv.style.display = 'none';
+      }
+    }
+    window.uploadPhoto = uploadPhoto;
+
+    // ========== GALLERY LOAD ==========
+    function loadGallery() {
+      const galleryContainer = document.getElementById('adminGallery');
+      galleryContainer.innerHTML = '';
+      const q = query(collection(db, 'gallery'), orderBy('uploadedAt', 'desc'));
+      onSnapshot(q, (querySnapshot) => {
+        galleryContainer.innerHTML = '';
+        if (querySnapshot.empty) {
+          galleryContainer.innerHTML = '<p style="text-align:center;color:#888;margin-top:20px;">No photos in gallery yet.</p>';
+          return;
+        }
+        const categories = {};
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const category = data.category || 'Uncategorized';
+          if (!categories[category]) categories[category] = [];
+          categories[category].push({ imageUrl: data.url, docId: docSnap.id });
+        });
+        for (const category in categories) {
+          const catId = `gallery-${category.replace(/\s+/g,'-')}`;
+          const div = document.createElement('div');
+          div.className = 'gallery-category';
+          div.innerHTML = `<h3>${category}</h3><div class="gallery-wrapper"><div class="gallery-grid" id="${catId}"></div></div>`;
+          galleryContainer.appendChild(div);
+          const grid = document.getElementById(catId);
+          categories[category].forEach(item => {
+            const cell = document.createElement('div');
+            cell.innerHTML = `<img src="${item.imageUrl}" alt="${category} cut"><button class="remove-btn" data-id="${item.docId}">✕ Remove</button>`;
+            cell.querySelector('.remove-btn').addEventListener('click', () => removePhoto(item.docId));
+            grid.appendChild(cell);
+          });
+        }
+      });
+    }
+
+    function removePhoto(docId) {
+      if (!confirm("Remove this photo?")) return;
+      deleteDoc(doc(db, 'gallery', docId))
+        .then(() => showToast('🗑 Photo removed.'))
+        .catch((error) => alert('Error removing photo: ' + error.message));
+    }
+    window.removePhoto = removePhoto;
+
+    // ========== RESERVATIONS ==========
+    function convertTimeToMinutes(timeStr) {
+      if (!timeStr) return 0;
+      const timeParts = timeStr.trim().split(' ');
+      if (timeParts.length !== 2) return 0;
+      const [time, period] = timeParts;
+      const [hours, minutes] = time.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return 0;
+      let totalMinutes = (hours * 60) + minutes;
+      if (period.toUpperCase() === 'PM' && hours !== 12) totalMinutes += (12 * 60);
+      if (period.toUpperCase() === 'AM' && hours === 12) totalMinutes -= (12 * 60);
+      return totalMinutes;
+    }
+
+    function loadReservations() {
+      const reservationsContainer = document.getElementById('reservationsList');
+      const q = query(collection(db, 'bookings'), orderBy("date", "asc"));
+      onSnapshot(q, snapshot => {
+        reservationsContainer.innerHTML = '';
+        if (snapshot.empty) {
+          reservationsContainer.innerHTML = "<p style='color:#888;text-align:center;'>No reservations found.</p>";
+          return;
+        }
+        const now = new Date();
+        const todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(todayD + 1);
+        const todayList = [], tomorrowList = [], upcomingList = [], pastList = [];
+
+        snapshot.forEach(docSnap => {
+          const booking = docSnap.data();
+          if (typeof booking.date !== "string") return;
+          const [y, m, d] = booking.date.split('-').map(Number);
+          const bDate = new Date(y, m - 1, d);
+          const bY = bDate.getFullYear(), bM = bDate.getMonth(), bD = bDate.getDate();
+          const formattedDate = bDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          const bookingWithSort = { id: docSnap.id, ...booking, date: formattedDate, timeSort: convertTimeToMinutes(booking.time) };
+
+          if (bY === todayY && bM === todayM && bD === todayD) todayList.push(bookingWithSort);
+          else if (bY === tomorrow.getFullYear() && bM === tomorrow.getMonth() && bD === tomorrow.getDate()) tomorrowList.push(bookingWithSort);
+          else if (bDate > tomorrow) upcomingList.push(bookingWithSort);
+          else pastList.push(bookingWithSort);
+        });
+
+        const sortByTime = (a, b) => a.timeSort - b.timeSort;
+        todayList.sort(sortByTime); tomorrowList.sort(sortByTime);
+        upcomingList.sort(sortByTime); pastList.sort(sortByTime);
+
+        function renderGroup(title, list, badgeClass) {
+          if (!list.length) return;
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'reservation-group';
+          groupDiv.textContent = title;
+          reservationsContainer.appendChild(groupDiv);
+          list.forEach(booking => {
+            const card = document.createElement('div');
+            card.className = 'reservation-card';
+            card.setAttribute('data-id', booking.id);
+            card.innerHTML = `
+              <div class="reservation-header">
+                <h3>${booking.name}</h3>
+                <span class="badge ${badgeClass}">${title}</span>
+              </div>
+              <p style="font-size:14px;margin:4px 0;"><strong>Booking #:</strong> ${booking.bookingNumber || "N/A"}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>Phone:</strong> ${booking.phone}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>Date:</strong> ${booking.date}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>Time:</strong> ${booking.time}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>Service:</strong> ${booking.service}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>💵 Payment:</strong> ${booking.deposit || "No"}</p>
+              <p style="font-size:14px;margin:4px 0;"><strong>Status:</strong>
+                <span class="${booking.status === 'Completed' ? 'status-completed' : booking.status === 'Not Completed' ? 'status-not' : 'status-none'}">
+                  ${booking.status || "Not Set"}
+                </span>
+              </p>
+              <div class="action-buttons">
+                <button class="cancel-btn">Cancel</button>
+                <button class="deposit-btn">Payment</button>
+                ${title === "Today" ? `<button class="status-btn">Status</button>` : ""}
+              </div>
+            `;
+            card.querySelector('.cancel-btn').addEventListener('click', () => cancelReservation(booking.id));
+            card.querySelector('.deposit-btn').addEventListener('click', () => updateDeposit(booking.id));
+            if (title === "Today") card.querySelector('.status-btn').addEventListener('click', () => updateStatus(booking.id));
+            reservationsContainer.appendChild(card);
+          });
+        }
+
+        renderGroup("Today", todayList, "today");
+        renderGroup("Tomorrow", tomorrowList, "tomorrow");
+        renderGroup("Upcoming", upcomingList, "upcoming");
+        renderGroup("Past", pastList, "past");
+      });
+    }
+
+    function searchReservations() {
+      const q = document.getElementById("reservationSearch").value.toLowerCase();
+      document.querySelectorAll(".highlighted").forEach(el => el.classList.remove("highlighted"));
+      if (!q) return;
+      for (let card of document.querySelectorAll(".reservation-card")) {
+        if (card.innerText.toLowerCase().includes(q)) {
+          card.classList.add("highlighted");
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          break;
+        }
+      }
+    }
+    window.searchReservations = searchReservations;
+
+    async function clearReservations() {
+      const confirmInput = document.getElementById('clearInput').value.trim();
+      if (confirmInput !== 'CONFIRM') { alert('TYPE "CONFIRM" TO CLEAR PAST RESERVATIONS.'); return; }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      try {
+        const snapshot = await getDocs(collection(db, 'bookings'));
+        const batch = writeBatch(db);
+        snapshot.forEach(docSnap => {
+          const booking = docSnap.data();
+          if (booking.date && typeof booking.date === "string") {
+            const [year, month, day] = booking.date.split('-').map(Number);
+            const bookingDate = new Date(year, month - 1, day);
+            bookingDate.setHours(0, 0, 0, 0);
+            if (bookingDate < today) batch.delete(docSnap.ref);
+          }
+        });
+        await batch.commit();
+        showToast('✅ Past reservations cleared.');
+        document.getElementById('clearInput').value = '';
+      } catch (err) {
+        console.error(err);
+        alert("Failed to clear past reservations.");
+      }
+    }
+    window.clearReservations = clearReservations;
+
+    function cancelReservation(orderId) {
+      if (!confirm("Are you sure you want to cancel this booking?")) return;
+      deleteDoc(doc(db, "bookings", orderId))
+        .then(() => showToast('🗑 Reservation cancelled.'))
+        .catch(err => alert("Failed to cancel: " + err.message));
+    }
+
+    // ========== DEPOSIT ==========
+    let currentBookingId = null;
+
+    function updateDeposit(bookingId) {
+      currentBookingId = bookingId;
+      document.querySelectorAll('input[name="depositChoice"]').forEach(r => r.checked = false);
+      document.getElementById('depositModal').style.display = 'flex';
+    }
+    window.updateDeposit = updateDeposit;
+
+    function confirmDeposit() {
+      const choice = document.querySelector('input[name="depositChoice"]:checked');
+      if (!choice) { showToast("⚠️ Please select an option.", false); return; }
+      updateDoc(doc(db, 'bookings', currentBookingId), { deposit: choice.value })
+        .then(() => { closeDepositModal(); showToast(`✅ Payment status: ${choice.value}`); })
+        .catch(() => showToast("❌ Failed to update payment.", false));
+    }
+    window.confirmDeposit = confirmDeposit;
+
+    function closeDepositModal() {
+      document.getElementById('depositModal').style.display = 'none';
+      currentBookingId = null;
+    }
+    window.closeDepositModal = closeDepositModal;
+
+    // ========== STATUS ==========
+    let currentStatusBookingId = null;
+
+    function updateStatus(bookingId) {
+      currentStatusBookingId = bookingId;
+      document.querySelectorAll('input[name="statusChoice"]').forEach(r => r.checked = false);
+      document.getElementById('statusModal').style.display = 'flex';
+    }
+    window.updateStatus = updateStatus;
+
+    function confirmStatus() {
+      const choice = document.querySelector('input[name="statusChoice"]:checked');
+      if (!choice) { alert("Please select an option."); return; }
+      updateDoc(doc(db, 'bookings', currentStatusBookingId), { status: choice.value })
+        .then(() => { closeStatusModal(); loadReservations(); })
+        .catch(() => alert("Failed to update status."));
+    }
+    window.confirmStatus = confirmStatus;
+
+    function closeStatusModal() {
+      document.getElementById('statusModal').style.display = 'none';
+      currentStatusBookingId = null;
+    }
+    window.closeStatusModal = closeStatusModal;
+
+    // ========== UNAVAILABLE DAYS ==========
+    async function addUnavailableDate() {
+      const date = document.getElementById('unavailableDateInput').value;
+      const allDay = document.getElementById('allDayCheckbox').checked;
+      const startTime = document.getElementById('startTimeInput').value;
+      const endTime = document.getElementById('endTimeInput').value;
+      if (!date) { alert("Please select a date."); return; }
+      if (!allDay && (!startTime || !endTime)) { alert("Please provide both start and end time."); return; }
+      const [yyyy, mm, dd] = date.split("-");
+      const finalDate = `${yyyy}-${mm}-${dd}`;
+      try {
+        const snapshot = await getDocs(query(collection(db, "bookings"), where("date", "==", finalDate)));
+        const conflicts = [];
+        if (!snapshot.empty) {
+          snapshot.forEach(docSnap => {
+            const booking = docSnap.data();
+            const bookingTime = booking.time || null;
+            if (allDay) {
+              conflicts.push({ id: docSnap.id, ...booking });
+            } else if (bookingTime) {
+              const bMin = convertTimeToMinutes(bookingTime);
+              const sMin = convertTimeToMinutes(startTime);
+              const eMin = convertTimeToMinutes(endTime);
+              if (bMin >= sMin && bMin <= eMin) conflicts.push({ id: docSnap.id, ...booking });
+            }
+          });
+        }
+        if (conflicts.length > 0) { showConflictModal(conflicts); return; }
+        await addDoc(collection(db, "unavailableDays"), {
+          date: finalDate, allDay,
+          startTime: allDay ? null : startTime,
+          endTime: allDay ? null : endTime,
+          timestamp: serverTimestamp()
+        });
+        document.getElementById('unavailableDateInput').value = '';
+        document.getElementById('startTimeInput').value = '';
+        document.getElementById('endTimeInput').value = '';
+        document.getElementById('allDayCheckbox').checked = true;
+        document.getElementById('timeInputs').style.display = 'none';
+        showToast('✅ Unavailable day added.');
+      } catch (error) {
+        console.error(error);
+        alert("Failed to add unavailable day.");
+      }
+    }
+    window.addUnavailableDate = addUnavailableDate;
+
+    function loadUnavailableDates() {
+      const list = document.getElementById('unavailableDatesList');
+      const q = query(collection(db, 'unavailableDays'), orderBy('date'));
+      onSnapshot(q, snapshot => {
+        list.innerHTML = '';
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          let formattedDate = d.date;
+          if (d.date && d.date.includes("-")) {
+            const [yyyy, mm, dd] = d.date.split("-");
+            formattedDate = new Date(yyyy, mm - 1, dd).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+          }
+          const text = `${formattedDate} — ${d.allDay ? 'All Day' : `${d.startTime} to ${d.endTime}`}`;
+          const li = document.createElement('li');
+          li.style.marginBottom = '8px';
+          li.textContent = text + ' ';
+          const btn = document.createElement('button');
+          btn.textContent = 'Remove';
+          btn.style.cssText = 'background:#e53935;color:white;border:none;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:12px;margin-bottom:0;';
+          btn.addEventListener('click', () => removeUnavailableDate(docSnap.id));
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+      });
+    }
+
+    function removeUnavailableDate(id) { deleteDoc(doc(db, 'unavailableDays', id)); }
+    window.removeUnavailableDate = removeUnavailableDate;
+
+    // ========== CONFLICT MODAL ==========
+    function showConflictModal(conflicts) {
+      const conflictList = document.getElementById('conflictList');
+      conflictList.innerHTML = '';
+      conflicts.forEach(booking => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:12px;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;background:#fafafa;';
+        div.innerHTML = `
+          <p style="margin:4px 0;font-size:14px;"><strong>Name:</strong> ${booking.name || "N/A"}</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Phone:</strong> ${booking.phone || "N/A"}</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Service:</strong> ${booking.service || "N/A"}</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Date:</strong> ${booking.date}</p>
+          <p style="margin:4px 0;font-size:14px;"><strong>Time:</strong> ${booking.time || "N/A"}</p>
+        `;
+        const btn = document.createElement('button');
+        btn.style.cssText = 'margin-top:8px;background:var(--accent);color:var(--primary);border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;margin-bottom:0;';
+        btn.textContent = 'Go to Reservations';
+        btn.addEventListener('click', () => goToReservationsAndHighlight(booking.id));
+        div.appendChild(btn);
+        conflictList.appendChild(div);
+      });
+      document.getElementById('conflictModal').style.display = 'flex';
+    }
+
+    function goToReservationsAndHighlight(bookingId) {
+      closeConflictModal();
+      showSection('reservationsPage');
+      setTimeout(() => {
+        const targetCard = document.querySelector(`[data-id="${bookingId}"]`);
+        if (targetCard) {
+          document.querySelectorAll(".highlighted").forEach(el => el.classList.remove("highlighted"));
+          targetCard.classList.add("highlighted");
+          targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => targetCard.classList.remove("highlighted"), 6000);
+        }
+      }, 500);
+    }
+
+    function closeConflictModal() { document.getElementById('conflictModal').style.display = 'none'; }
+    window.closeConflictModal = closeConflictModal;
+
+    // ========== TOAST ==========
+    function showToast(message, success = true) {
+      const toast = document.getElementById("toast");
+      toast.innerText = message;
+      toast.style.backgroundColor = success ? "#4CAF50" : "#e53935";
+      toast.style.visibility = "visible";
+      toast.style.opacity = "1";
+      toast.style.bottom = "50px";
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.bottom = "30px";
+        setTimeout(() => { toast.style.visibility = "hidden"; }, 500);
+      }, 3000);
+    }
+
+    // ========== ADMIN UID GUARD ==========
+    const ADMIN_UID = "nIwRfcHc7Of6ahl0Qj0M2QWtPTc2";
+
+    onAuthStateChanged(auth, user => {
+      const overlay = document.getElementById('accessOverlay');
+      const status  = document.getElementById('accessStatus');
+      const content = document.getElementById('dashboardContent');
+
+      if (!user) {
+        status.textContent = 'ACCESS DENIED — REDIRECTING...';
+        status.style.color = '#e53935';
+        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+        return;
+      }
+
+      if (user.uid !== ADMIN_UID) {
+        status.textContent = 'UNAUTHORISED — SIGNING OUT...';
+        status.style.color = '#e53935';
+        signOut(auth).then(() => {
+          setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+        });
+        return;
+      }
+
+      status.textContent = 'ACCESS GRANTED';
+      status.style.color = '#4CAF50';
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.4s';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          content.style.display = 'block';
+        }, 400);
+      }, 600);
+
+      loadGallery();
+      showSection('reservationsPage');
+      loadReservations();
+      loadUnavailableDates();
+    });
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -360,6 +897,19 @@
       display: block;
       margin-bottom: 4px;
     }
+
+    /* Screen-reader only — hides label visually without breaking accessibility */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
 </head>
 
@@ -402,8 +952,9 @@
     <h2>📸 UPLOAD PHOTO</h2>
 
     <!-- Device Upload Area -->
+    <label for="photoFileInput" class="sr-only">Choose a photo to upload</label>
     <div class="upload-area" id="uploadArea">
-      <input type="file" id="photoFileInput" accept="image/*" onchange="previewImage(event)"/>
+      <input type="file" id="photoFileInput" accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif" onchange="previewImage(event)"/>
       <div class="upload-icon">📷</div>
       <p><strong>Tap to choose a photo</strong><br>or drag and drop here</p>
     </div>
@@ -436,11 +987,13 @@
   <div class="admin-container content-section" id="reservationsPage">
     <h2>RESERVATIONS</h2>
     <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+      <label for="reservationSearch" class="sr-only">Search reservations</label>
       <input id="reservationSearch" placeholder="SEARCH RESERVATIONS..." type="text" style="flex:1; min-width:180px;"/>
       <button onclick="searchReservations()" style="margin-bottom:0;">Search</button>
     </div>
     <div id="reservationsList"></div>
     <div class="clear-container">
+      <label for="clearInput" class="sr-only">Type CONFIRM to clear past reservations</label>
       <input id="clearInput" placeholder='Type "CONFIRM" to clear past reservations' type="text"/>
       <button onclick="clearReservations()">Clear Past Reservations</button>
     </div>
@@ -513,14 +1066,7 @@
   <div id="toast" style="visibility:hidden; min-width:250px; margin-left:-125px; background-color:#4CAF50; color:#fff; text-align:center; border-radius:8px; padding:14px; position:fixed; z-index:3000; left:50%; bottom:30px; font-size:15px; box-shadow:0 4px 12px rgba(0,0,0,0.2); opacity:0; transition:opacity 0.5s, bottom 0.5s; font-family:'Barlow',sans-serif;"></div>
 
   <script>
-   const firebaseConfig = {
-  apiKey: "AIzaSyD837JBOi4EdywnaPAmCS1krL9HLHy90CI",
-  authDomain: "jerome-celebrity-kutt.firebaseapp.com",
-  projectId: "jerome-celebrity-kutt",
-  storageBucket: "jerome-celebrity-kutt.firebasestorage.app",
-  messagingSenderId: "43174384691",
-  appId: "1:43174384691:web:9509d2f7a1e4393306ff46"
-};
+   /* All Firebase logic moved to type="module" script in <head> — CSP safe, no eval */
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -958,82 +1504,6 @@
       document.getElementById('conflictModal').style.display = 'flex';
     }
 
-    function goToReservationsAndHighlight(bookingId) {
-      closeConflictModal();
-      showSection('reservationsPage');
-      setTimeout(() => {
-        const targetCard = document.querySelector(`[data-id="${bookingId}"]`);
-        if (targetCard) {
-          document.querySelectorAll(".highlighted").forEach(el => el.classList.remove("highlighted"));
-          targetCard.classList.add("highlighted");
-          targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-          setTimeout(() => targetCard.classList.remove("highlighted"), 6000);
-        }
-      }, 500);
-    }
-
-    function closeConflictModal() {
-      document.getElementById('conflictModal').style.display = 'none';
-    }
-
-    // ========== TOAST ==========
-    function showToast(message, success = true) {
-      const toast = document.getElementById("toast");
-      toast.innerText = message;
-      toast.style.backgroundColor = success ? "#4CAF50" : "#e53935";
-      toast.style.visibility = "visible";
-      toast.style.opacity = "1";
-      toast.style.bottom = "50px";
-      setTimeout(() => {
-        toast.style.opacity = "0";
-        toast.style.bottom = "30px";
-        setTimeout(() => { toast.style.visibility = "hidden"; }, 500);
-      }, 3000);
-    }
-
-    // ========== ADMIN UID GUARD ==========
-    const ADMIN_UID = "nIwRfcHc7Of6ahl0Qj0M2QWtPTc2";
-
-    // ========== AUTH GUARD WITH OVERLAY ==========
-    firebase.auth().onAuthStateChanged(user => {
-      const overlay = document.getElementById('accessOverlay');
-      const status  = document.getElementById('accessStatus');
-      const content = document.getElementById('dashboardContent');
-
-      if (!user) {
-        status.textContent = 'ACCESS DENIED — REDIRECTING...';
-        status.style.color = '#e53935';
-        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
-        return;
-      }
-
-      if (user.uid !== ADMIN_UID) {
-        status.textContent = 'UNAUTHORISED — SIGNING OUT...';
-        status.style.color = '#e53935';
-        firebase.auth().signOut().then(() => {
-          setTimeout(() => { window.location.href = 'index.html'; }, 1200);
-        });
-        return;
-      }
-
-      // Verified admin — reveal dashboard
-      status.textContent = 'ACCESS GRANTED';
-      status.style.color = '#4CAF50';
-      setTimeout(() => {
-        overlay.style.transition = 'opacity 0.4s';
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-          overlay.style.display = 'none';
-          content.style.display = 'block';
-        }, 400);
-      }, 600);
-
-      loadGallery();
-      showSection('reservationsPage');
-      loadReservations();
-      loadUnavailableDates();
-    });
-  </script>
   </div><!-- end #dashboardContent -->
 </body>
 </html>
