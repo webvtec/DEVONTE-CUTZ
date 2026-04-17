@@ -728,14 +728,21 @@
     const galleryContainer = document.getElementById(containerId);
     galleryContainer.innerHTML = '';
 
-    db.collection('gallery').orderBy('uploadedAt', 'desc').onSnapshot((querySnapshot) => {
+    db.collection('gallery').orderBy('sortOrder', 'asc').onSnapshot((querySnapshot) => {
       galleryContainer.innerHTML = '';
+      let docs = [];
+      querySnapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => {
+        if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder;
+        if (a.sortOrder !== undefined) return -1;
+        if (b.sortOrder !== undefined) return 1;
+        return 0;
+      });
       const categories = {};
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const imageUrl = data.url;
-        const category = data.category || 'Uncategorized';
+      docs.forEach((item) => {
+        const imageUrl = item.url;
+        const category = item.category || 'Uncategorized';
 
         if (!categories[category]) categories[category] = [];
         categories[category].push(imageUrl);
@@ -1315,7 +1322,7 @@
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>⏰ Time:</strong> ${b.time || "N/A"}</p>
               ${cleanService ? `<p style="margin:4px 0; font-size:14px; color:#000;"><strong>✂ Services:</strong> ${cleanService}</p>` : ''}
               <p style="margin:4px 0; font-size:14px; color:#000;"><strong>💵 Payment:</strong> <span style="color:${depositStatus ? 'green' : 'red'}; font-weight:bold;">${depositStatus ? 'Confirmed' : 'Pending'}</span></p>
-              <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📌 Status:</strong> <span style="color:${isCancelled ? '#e53935' : '#2e7d32'}; font-weight:bold;">${isCancelled ? '❌ Cancelled' : '✅ Active'}</span></p>
+              <p style="margin:4px 0; font-size:14px; color:#000;"><strong>📌 Status:</strong> <span style="color:${isCancelled ? '#e53935' : '#2e7d32'}; font-weight:bold;">${isCancelled ? `❌ Cancelled — <strong>BY ${b.cancelledBy === 'client' ? 'CLIENT' : 'ADMIN'}</strong>` : '✅ Active'}</span></p>
               ${!isCancelled ? `
               <button onclick="cancelUserBooking('${b.id}', '${b.bookingNumber || 'N/A'}')" style="margin-top:10px; width:100%; padding:10px; background:#e53935; color:white; border:none; border-radius:6px; cursor:pointer; font-family:'Barlow',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.5px; transition:background 0.2s;" onmouseover="this.style.background='#c62828'" onmouseout="this.style.background='#e53935'">
                 ✕ CANCEL BOOKING
@@ -1365,7 +1372,7 @@
         if (!doc.exists) { Swal.fire('Not Found', 'Booking could not be found.', 'error'); return; }
         if (doc.data().uid !== user.uid) { Swal.fire('Denied', 'You can only cancel your own bookings.', 'error'); return; }
 
-        db.collection('bookings').doc(bookingId).update({ status: 'Cancelled' })
+        db.collection('bookings').doc(bookingId).update({ status: 'Cancelled', cancelledBy: 'client' })
           .then(() => {
             Swal.fire({
               title: 'Booking Cancelled',
