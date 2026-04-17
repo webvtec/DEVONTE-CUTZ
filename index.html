@@ -905,31 +905,39 @@
         }
       });
 
-      for (let t = openMinutes; t <= closeMinutes; t += 5) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const selectedDate = new Date(date + "T00:00:00");
+      const isToday = selectedDate.getTime() === today.getTime();
+      const currentMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : 0;
+
+      function formatMins(m) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        const ampm = h >= 12 ? "PM" : "AM";
+        const displayH = ((h + 11) % 12 + 1);
+        return `${displayH}:${min.toString().padStart(2, "0")} ${ampm}`;
+      }
+
+      let t = openMinutes;
+      while (t + duration <= closeMinutes + 1) {
         const end = t + duration;
 
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const selectedDate = new Date(date + "T00:00:00");
-        if (selectedDate.getTime() === today.getTime()) {
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          if (t <= currentMinutes) continue;
-        }
+        if (isToday && t <= currentMinutes) { t = end; continue; }
 
-        let conflict = bookings.some(b => !(end <= b.start || t >= b.end)) ||
-                       unavailableRanges.some(r => !(end <= r.start || t >= r.end));
+        const blockingRange = unavailableRanges.find(r => !(end <= r.start || t >= r.end));
+        if (blockingRange) { t = blockingRange.end; continue; }
 
-        if (!conflict) {
-          const hours = Math.floor(t / 60);
-          const minutes = t % 60;
-          const ampm = hours >= 12 ? "PM" : "AM";
-          const displayHours = ((hours + 11) % 12 + 1);
-          const displayTime = `${displayHours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
-          let option = document.createElement("option");
-          option.value = displayTime;
-          option.textContent = displayTime;
-          timeSelect.appendChild(option);
-        }
+        const bookedConflict = bookings.some(b => !(end <= b.start || t >= b.end));
+        if (bookedConflict) { t = end; continue; }
+
+        const label = `${formatMins(t)} - ${formatMins(end)}`;
+        let option = document.createElement("option");
+        option.value = formatMins(t);
+        option.textContent = label;
+        timeSelect.appendChild(option);
+
+        t = end;
       }
 
       if (timeSelect.options.length === 1) {
