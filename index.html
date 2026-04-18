@@ -1017,16 +1017,22 @@
 
   // ========== ADDON PRICES ==========
   const addonPrices = {
-    'Beard Dye': 200,
-    'Warm Towel': 500,
     'Custom Design': 200,
+    'Black Dye': 300,
   };
+
+  // Per-cut price overrides: used when a specific cut changes the base price
+  const cutPriceOverrides = {
+    'Kids Premium Cut': { 'Big Chop': 2500 }
+  };
+
+  let selectedCutPrice = null; // price of the currently selected cut (if override exists)
 
   function getSelectedTotal() {
     const haircut = document.getElementById('haircutType')?.value || 'NONE';
     if (!haircut || haircut === 'NONE') return 0;
     const def = pricingCardDefs[haircut];
-    let total = def?.basePrice || 0;
+    let total = selectedCutPrice !== null ? selectedCutPrice : (def?.basePrice || 0);
     selectedAddons.forEach(a => { if (addonPrices[a]) total += addonPrices[a]; });
     return total;
   }
@@ -1043,9 +1049,14 @@
     document.querySelectorAll('.cut-item.selected').forEach(e => e.classList.remove('selected'));
     if (selectedCutItem === name) {
       selectedCutItem = null;
+      selectedCutPrice = null;
     } else {
       selectedCutItem = name;
       el.classList.add('selected');
+      // Check for a per-cut price override
+      const haircut = document.getElementById('haircutType')?.value || 'NONE';
+      const overrides = cutPriceOverrides[haircut];
+      selectedCutPrice = (overrides && overrides[name] !== undefined) ? overrides[name] : null;
     }
     updateSelectionSummary();
   }
@@ -1081,6 +1092,7 @@
 
   function clearSelections() {
     selectedCutItem = null;
+    selectedCutPrice = null;
     selectedAddons.clear();
     document.querySelectorAll('.cut-item.selected, .addon-item.selected').forEach(e => e.classList.remove('selected'));
     updateSelectionSummary();
