@@ -1452,8 +1452,7 @@
       const snapshot = await db.collection("bookings").where("date", "==", date).get();
       const bookings = snapshot.docs.map(doc => {
         const bookedTime = convertToMinutes(normalizeTimeStr(doc.data().time));
-        const bookedDuration = doc.data().duration || 30;
-        return { start: bookedTime, end: bookedTime + bookedDuration };
+        return { start: bookedTime, end: bookedTime + SLOT_INTERVAL };
       });
 
       const unavailableSnapshot = await db.collection("unavailableDays").where("date", "==", date).get();
@@ -1569,14 +1568,13 @@
 
         return db.collection('bookings').where('date', '==', date).get()
           .then((querySnapshot) => {
-            const newServiceDuration = getSelectedServiceDuration();
-            const newServiceEndTime = selectedMinutes + newServiceDuration;
+            const SLOT_INTERVAL = 35;
+            const newServiceEndTime = selectedMinutes + SLOT_INTERVAL;
 
             for (let doc of querySnapshot.docs) {
               let bookedTime = doc.data().time.trim().replace(/\s+/g, ' ');
               let bookedMinutes = convertToMinutes(bookedTime);
-              let bookedDuration = doc.data().duration || 30;
-              let bookedEndTime = bookedMinutes + bookedDuration;
+              let bookedEndTime = bookedMinutes + SLOT_INTERVAL;
 
               if (selectedMinutes < bookedEndTime && bookedMinutes < newServiceEndTime) return false;
             }
