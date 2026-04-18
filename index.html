@@ -1659,11 +1659,6 @@
           body: JSON.stringify({ chat_id: telegramChatId, text: message, parse_mode: "HTML" })
         }).catch(() => {}); // Telegram failure should never block confirmation
 
-        return docRef;
-      })
-      .then((docRef) => {
-        if (!docRef) return;
-
         document.querySelector("#bookingSection form").reset();
         clearSelections();
         document.getElementById('adultServiceWrap').style.display = 'none';
