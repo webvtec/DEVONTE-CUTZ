@@ -859,6 +859,7 @@
                 <p style="font-size:14px; margin:4px 0;"><strong>Date:</strong> ${booking.date}</p>
                 <p style="font-size:14px; margin:4px 0;"><strong>Time:</strong> ${booking.time}</p>
                 <p style="font-size:14px; margin:4px 0;"><strong>Service:</strong> ${booking.service}</p>
+                ${booking.total ? `<p style="font-size:14px; margin:4px 0;"><strong>💰 Total Cost:</strong> <span style="color:#1a7a1a; font-weight:700; font-size:15px;">$${Number(booking.total).toLocaleString()}</span></p>` : ''}
                 <p style="font-size:14px; margin:4px 0;"><strong>💵 Payment:</strong> ${booking.deposit || "No"}</p>
                 <p style="font-size:14px; margin:4px 0;"><strong>Status:</strong>
                   <span class="${booking.status === 'Completed' ? 'status-completed' : booking.status === 'Cancelled' ? 'status-not' : booking.status === 'Not Completed' ? 'status-not' : 'status-none'}">
