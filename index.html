@@ -465,10 +465,11 @@
   <a onclick="showSection('gallerySection'); closeMenu();">✂ CUTS</a>
   <a onclick="showSection('bookingSection'); closeMenu();">📆 BOOKING</a>
   <a onclick="showSection('reviewsSection'); closeMenu();">⭐ REVIEWS</a>
+  <a onclick="showSection('walkInPriceSection'); closeMenu();">💰 Walk-In Price List</a>
 
   <div class="opening-hours">
     <h3>APPOINTMENTS:</h3>
-    <p>Mon, Wed, Fri: 10:30 AM – 6:00 PM</p>
+    <p>Mon, Wed, Fri: 10:00 AM – 7:00 PM</p>
     <h3 style="margin-top:6px;">WALK-INS:</h3>
     <p>Tue, Thu, Sat: 10:30 AM – 6:00 PM</p>
     <p>Sunday: Closed</p>
@@ -570,9 +571,8 @@
       <label for="adultService">Adult Service:</label>
       <select id="adultService" onchange="onServiceChange();">
         <option value="NONE">— Select a service —</option>
-        <option value="Celebrity Premium Cut">⭐ Celebrity Premium Cut — $3,000</option>
-        <option value="Celebrity Regular Cut">✂ Celebrity Regular Cut — $2,500</option>
-        <option value="adult-custom">Build your own cut</option>
+        <option value="Celebrity Premium Cut">⭐ Celebrity Premium Cut — $3,500</option>
+        <option value="Celebrity Regular Cut">✂ Celebrity Regular Cut — $3,000</option>
       </select>
     </div>
 
@@ -581,13 +581,20 @@
       <label for="teenService">Teen Service:</label>
       <select id="teenService" onchange="onServiceChange();">
         <option value="NONE">— Select a service —</option>
-        <option value="Teenage Premium Cut">⭐ Celebrity Premium Cut — $2,000</option>
-        <option value="teen-custom">Build your own cut</option>
+        <option value="Teenage Premium Cut">⭐ Celebrity Premium Cut — $2,500</option>
+        <option value="Teenage Regular Cut">✂ Celebrity Regular Cut — $2,000</option>
       </select>
     </div>
 
-    <!-- Kids: no sub-picker, just price list -->
-    <!-- (kids pricing card shown automatically) -->
+    <!-- Kids: service picker -->
+    <div id="kidsServiceWrap" style="display:none;">
+      <label for="kidsService">Kids Service:</label>
+      <select id="kidsService" onchange="onServiceChange();">
+        <option value="NONE">— Select a service —</option>
+        <option value="Kids Premium Cut">⭐ Celebrity Premium Cut — $2,000</option>
+        <option value="Kids Regular Cut">✂ Celebrity Regular Cut — $1,500</option>
+      </select>
+    </div>
 
     <!-- Hidden field that carries the real service value for booking logic -->
     <input type="hidden" id="haircutType" value="NONE"/>
@@ -630,6 +637,88 @@
   </form>
   <p id="reviewSubmitMsg" style="text-align:center; color:green;"></p>
   <div id="reviewsContainer" style="max-width:600px; margin:20px auto; padding:0 15px;"></div>
+</div>
+
+<!-- Walk-In Price List Section -->
+<div class="content-section" id="walkInPriceSection">
+  <h1 style="font-family:'Bebas Neue',cursive; letter-spacing:2px; color:var(--accent); text-align:center; margin-top:80px; font-size:30px;">Walk-In Price List</h1>
+  <div style="max-width:420px; margin:0 auto 24px; background:#1a1a1a; border-left:4px solid var(--accent); border-radius:6px; padding:10px 16px; font-size:13px; color:#ccc; line-height:1.6;">
+    🚶 <strong style="color:var(--accent);">Walk-ins:</strong> Tuesdays, Thursdays &amp; Saturdays &nbsp;|&nbsp; 10:30 AM – 6:00 PM
+  </div>
+  <div style="max-width:420px; margin:0 auto; padding:0 16px 80px;">
+
+    <!-- Men's Cuts -->
+    <div style="background:#1a1a1a; border-radius:10px; overflow:hidden; margin-bottom:16px; border:1px solid rgba(200,168,75,0.3);">
+      <div style="background:var(--accent); padding:10px 16px;">
+        <span style="font-family:'Bebas Neue',cursive; letter-spacing:2px; font-size:15px; color:#1a1a1a;">✂ MEN'S CUTS</span>
+      </div>
+      <div style="padding:12px 16px;">
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Haircut &amp; Taper with Eyebrow &amp; Dye</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$2,700</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Celebrity Big Chop</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$3,000</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Taper &amp; Fades Only with Spray Dye</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$2,300</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add-Ons -->
+    <div style="background:#1a1a1a; border-radius:10px; overflow:hidden; margin-bottom:16px; border:1px solid rgba(200,168,75,0.3);">
+      <div style="background:var(--accent); padding:10px 16px;">
+        <span style="font-family:'Bebas Neue',cursive; letter-spacing:2px; font-size:15px; color:#1a1a1a;">➕ ADD-ONS</span>
+      </div>
+      <div style="padding:12px 16px;">
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Line Up</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$1,000</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Dye</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$300</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Eyebrow</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$500</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Premium Eyebrow Tinting with Concealer</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$1,000</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0;">
+          <span style="font-size:14px; color:#f0f0f0;">Custom Designs</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$100+</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other Services -->
+    <div style="background:#1a1a1a; border-radius:10px; overflow:hidden; margin-bottom:16px; border:1px solid rgba(200,168,75,0.3);">
+      <div style="background:var(--accent); padding:10px 16px;">
+        <span style="font-family:'Bebas Neue',cursive; letter-spacing:2px; font-size:15px; color:#1a1a1a;">💈 OTHER SERVICES</span>
+      </div>
+      <div style="padding:12px 16px;">
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Teenagers (13–17)</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$2,000</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-size:14px; color:#f0f0f0;">Kids (3–12)</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$1,500</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:8px 0;">
+          <span style="font-size:14px; color:#f0f0f0;">Female Haircuts</span>
+          <span style="font-size:14px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:12px;">$2,500</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- Admin Login Modal -->
@@ -819,11 +908,11 @@
   // ========== BUSINESS HOURS ==========
   // Appointment days: Mon, Wed, Fri | Walk-in days: Tue, Thu, Sat | Closed: Sun
   const businessHours = {
-    'Monday': { open: '10:30 AM', close: '7:30 PM' },
+    'Monday': { open: '10:00 AM', close: '7:00 PM' },
     'Tuesday': null,   // Walk-in only — no online appointments
-    'Wednesday': { open: '10:30 AM', close: '7:30 PM' },
+    'Wednesday': { open: '10:00 AM', close: '7:00 PM' },
     'Thursday': null,  // Walk-in only — no online appointments
-    'Friday': { open: '10:30 AM', close: '7:30 PM' },
+    'Friday': { open: '10:00 AM', close: '7:00 PM' },
     'Saturday': null,  // Walk-in only — no online appointments
     'Sunday': null
   };
@@ -832,10 +921,13 @@
 
   // ========== SERVICE DURATIONS ==========
   const serviceDurations = {
-    "Celebrity Premium Cut": 40,
-    "Celebrity Regular Cut": 40,
-    "Teenage Premium Cut": 40,
-    "Kids Cut": 40,
+    "Celebrity Premium Cut": 45,
+    "Celebrity Regular Cut": 35,
+    "Teenage Premium Cut": 30,
+    "Teenage Regular Cut": 20,
+    "Kids Premium Cut": 30,
+    "Kids Regular Cut": 30,
+    "Kids Cut": 30,
     "Beard Trim": 20,
     "Beard Shape Up": 25,
     "Full Beard Design": 35,
@@ -844,10 +936,10 @@
     "Fade & Beard Design": 75,
     "Hair Wash": 15,
     "Scalp Treatment": 30,
-    "Kid Package": 40,
-    "Big Chop Transformation": 40,
-    "adult-custom": 40,
-    "teen-custom": 40
+    "Kid Package": 30,
+    "Big Chop Transformation": 45,
+    "adult-custom": 35,
+    "teen-custom": 20
   };
 
   function getSelectedServices() {
@@ -1014,12 +1106,11 @@
     return html;
   }
 
-  // Card definitions — all items are now clickable rows
   const pricingCardDefs = {
 
     "Celebrity Premium Cut": {
-      label: "Adult 18+ — Celebrity Premium Cut ($3,000)",
-      html: () => buildPricingCard('⭐ ADULT 18+ — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $3,000', [
+      label: "Adult 18+ — Celebrity Premium Cut ($3,500)",
+      html: () => buildPricingCard('⭐ ADULT 18+ — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $3,500 &nbsp;|&nbsp; 45 mins', [
         { title: 'Cut of Choice (pick one):', items: [
           {name:'All Round Fade',price:''},
           {name:'Taper Fade',price:''},
@@ -1027,18 +1118,24 @@
           {name:'Bald Cut',price:''},
           {name:'Mohawk',price:''},
           {name:'Flat Top',price:''},
+          {name:'Big Chop',price:''},
         ]},
         { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
           {name:'Eyebrows',price:'',isAddon:true},
           {name:'Line Up',price:'',isAddon:true},
-          {name:'Black Dye',price:'',isAddon:true},
+          {name:'Head Dye',price:'',isAddon:true},
+          {name:'Beard Dye',price:'',isAddon:true},
+          {name:'Warm Towel',price:'',isAddon:true},
+        ]},
+        { title: 'Optional Extra:', items: [
+          {name:'Custom Design',price:'$200+',isAddon:true},
         ]}
       ])
     },
 
     "Celebrity Regular Cut": {
-      label: "Adult 18+ — Celebrity Regular Cut ($2,500)",
-      html: () => buildPricingCard('✂ ADULT 18+ — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $2,500', [
+      label: "Adult 18+ — Celebrity Regular Cut ($3,000)",
+      html: () => buildPricingCard('✂ ADULT 18+ — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $3,000 &nbsp;|&nbsp; 35 mins', [
         { title: 'Cut of Choice (pick one):', items: [
           {name:'All Round Fade',price:''},
           {name:'Taper Fade',price:''},
@@ -1047,8 +1144,7 @@
           {name:'Mohawk',price:''},
           {name:'Flat Top',price:''},
         ]},
-        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
-          {name:'Line Up',price:'',isAddon:true},
+        { title: 'PLUS+ Add-on Included (tap to confirm):', items: [
           {name:'Black Dye',price:'',isAddon:true},
         ]}
       ])
@@ -1059,24 +1155,49 @@
       html: () => buildPricingCard('✂ ADULT 18+ — APPOINTMENT PRICE LIST', [
         { title: 'Cuts (pick one):', items: [
           {name:'All Round Fade',price:'$2,000'},
-          {name:'Taper Fade',price:'$'},
-          {name:'One Level',price:'$'},
-          {name:'Bald Cut',price:'$'},
-          {name:'Mohawk',price:'$'},
-          {name:'Flat Top',price:'$'},
+          {name:'Taper Fade',price:'$2,000'},
+          {name:'One Level',price:'$2,000'},
+          {name:'Bald Cut',price:'$2,000'},
+          {name:'Mohawk',price:'$2,000'},
+          {name:'Flat Top',price:'$2,000'},
         ]},
         { title: 'Add-Ons (pick any):', items: [
-          {name:'Line Up',price:'$1,800',isAddon:true},
-          {name:'Custom Design',price:'$100+',isAddon:true},
-          {name:'Black Dye',price:'$',isAddon:true},
+          {name:'Line Up',price:'$1,000',isAddon:true},
+          {name:'Custom Design',price:'$200+',isAddon:true},
+          {name:'Black Dye',price:'$300',isAddon:true},
           {name:'Eyebrows',price:'$500',isAddon:true},
         ]}
       ])
     },
 
     "Teenage Premium Cut": {
-      label: "Teen 13–17 — Celebrity Premium Cut ($2,000)",
-      html: () => buildPricingCard('⭐ TEEN 13–17 — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $2,000', [
+      label: "Teen 13–17 — Celebrity Premium Cut ($2,500)",
+      html: () => buildPricingCard('⭐ TEEN 13–17 — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $2,500 &nbsp;|&nbsp; 30 mins', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:''},
+          {name:'Taper Fade',price:''},
+          {name:'One Level',price:''},
+          {name:'Bald Cut',price:''},
+          {name:'Mohawk',price:''},
+          {name:'Flat Top',price:''},
+          {name:'Big Chop',price:''},
+        ]},
+        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
+          {name:'Eyebrows',price:'',isAddon:true},
+          {name:'Line Up',price:'',isAddon:true},
+          {name:'Head Dye',price:'',isAddon:true},
+          {name:'Beard Dye',price:'',isAddon:true},
+          {name:'Warm Towel',price:'',isAddon:true},
+        ]},
+        { title: 'Optional Extra:', items: [
+          {name:'Custom Design',price:'$200+',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Teenage Regular Cut": {
+      label: "Teen 13–17 — Celebrity Regular Cut ($2,000)",
+      html: () => buildPricingCard('✂ TEEN 13–17 — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $2,000 &nbsp;|&nbsp; 20 mins', [
         { title: 'Cut of Choice (pick one):', items: [
           {name:'All Round Fade',price:''},
           {name:'Taper Fade',price:''},
@@ -1085,9 +1206,7 @@
           {name:'Mohawk',price:''},
           {name:'Flat Top',price:''},
         ]},
-        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
-          {name:'Eyebrows',price:'',isAddon:true},
-          {name:'Line Up',price:'',isAddon:true},
+        { title: 'PLUS+ Add-on Included (tap to confirm):', items: [
           {name:'Black Dye',price:'',isAddon:true},
         ]}
       ])
@@ -1097,38 +1216,70 @@
       label: "Teen 13–17 — Build Your Own Cut",
       html: () => buildPricingCard('✂ TEEN 13–17 — APPOINTMENT PRICE LIST', [
         { title: 'Cuts (pick one):', items: [
-          {name:'All Round Fade',price:'$'},
-          {name:'Taper Fade',price:'$'},
-          {name:'One Level',price:'$'},
-          {name:'Bald Cut',price:'$'},
-          {name:'Mohawk',price:'$'},
-          {name:'Flat Top',price:'$'},
+          {name:'All Round Fade',price:'$1,500'},
+          {name:'Taper Fade',price:'$1,500'},
+          {name:'One Level',price:'$1,500'},
+          {name:'Bald Cut',price:'$1,500'},
+          {name:'Mohawk',price:'$1,500'},
+          {name:'Flat Top',price:'$1,500'},
         ]},
         { title: 'Add-Ons (pick any):', items: [
-          {name:'Line Up',price:'$',isAddon:true},
-          {name:'Custom Design',price:'$100+',isAddon:true},
-          {name:'Black Dye',price:'$',isAddon:true},
-          {name:'Eyebrows',price:'$',isAddon:true},
+          {name:'Line Up',price:'$500',isAddon:true},
+          {name:'Custom Design',price:'$200+',isAddon:true},
+          {name:'Black Dye',price:'$300',isAddon:true},
+          {name:'Eyebrows',price:'$500',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Kids Premium Cut": {
+      label: "Kids 3–12 — Celebrity Premium Cut ($2,000)",
+      html: () => buildPricingCard('⭐ KIDS 3–12 — CELEBRITY PREMIUM CUT &nbsp;|&nbsp; 30 mins', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:'$2,000'},
+          {name:'Taper Fade',price:'$2,000'},
+          {name:'One Level',price:'$2,000'},
+          {name:'Bald Cut',price:'$2,000'},
+          {name:'Mohawk',price:'$2,000'},
+          {name:'Flat Top',price:'$2,000'},
+          {name:'Big Chop',price:'$2,500'},
+        ]},
+        { title: 'Optional Add-On:', items: [
+          {name:'Custom Design',price:'$200+',isAddon:true},
+          {name:'Black Dye',price:'$300',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Kids Regular Cut": {
+      label: "Kids 3–12 — Celebrity Regular Cut ($1,500)",
+      html: () => buildPricingCard('✂ KIDS 3–12 — CELEBRITY REGULAR CUT &nbsp;|&nbsp; 30 mins', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:'$1,500'},
+          {name:'Taper Fade',price:'$1,500'},
+          {name:'One Level',price:'$1,500'},
+          {name:'Bald Cut',price:'$1,500'},
+          {name:'Mohawk',price:'$1,500'},
+          {name:'Flat Top',price:'$1,500'},
         ]}
       ])
     },
 
     "Kids Cut": {
       label: "Kids 3–12 — Cut",
-      html: () => buildPricingCard('✂ KIDS 3–12 — APPOINTMENT PRICE LIST', [
+      html: () => buildPricingCard('✂ KIDS 3–12 — APPOINTMENT PRICE LIST &nbsp;|&nbsp; 30 mins', [
         { title: 'Cuts (pick one):', items: [
-          {name:'All Round Fade',price:'$'},
-          {name:'Taper Fade',price:'$'},
-          {name:'One Level',price:'$'},
-          {name:'Bald Cut',price:'$'},
-          {name:'Mohawk',price:'$'},
-          {name:'Flat Top',price:'$'},
+          {name:'All Round Fade',price:'$2,000'},
+          {name:'Taper Fade',price:'$2,000'},
+          {name:'One Level',price:'$2,000'},
+          {name:'Bald Cut',price:'$2,000'},
+          {name:'Mohawk',price:'$2,000'},
+          {name:'Flat Top',price:'$2,000'},
+          {name:'Big Chop',price:'$2,500'},
         ]},
         { title: 'Add-Ons (pick any):', items: [
-          {name:'Line Up',price:'$',isAddon:true},
-          {name:'Custom Design',price:'$100+',isAddon:true},
-          {name:'Black Dye',price:'$',isAddon:true},
-          {name:'Eyebrows',price:'$',isAddon:true},
+          {name:'Custom Design',price:'$200+',isAddon:true},
+          {name:'Black Dye',price:'$300',isAddon:true},
         ]}
       ])
     }
@@ -1141,8 +1292,10 @@
     const group = document.getElementById('ageGroup').value;
     document.getElementById('adultServiceWrap').style.display = 'none';
     document.getElementById('teenServiceWrap').style.display = 'none';
+    document.getElementById('kidsServiceWrap').style.display = 'none';
     document.getElementById('adultService').value = 'NONE';
     document.getElementById('teenService').value = 'NONE';
+    document.getElementById('kidsService').value = 'NONE';
 
     const card = document.getElementById('serviceIncludesCard');
     const hidden = document.getElementById('haircutType');
@@ -1159,10 +1312,10 @@
       card.style.display = 'none';
       card.innerHTML = '';
     } else if (group === 'kids') {
-      hidden.value = 'Kids Cut';
-      const def = pricingCardDefs['Kids Cut'];
-      card.innerHTML = def.html();
-      card.style.display = 'block';
+      document.getElementById('kidsServiceWrap').style.display = 'block';
+      hidden.value = 'NONE';
+      card.style.display = 'none';
+      card.innerHTML = '';
     } else {
       hidden.value = 'NONE';
       card.style.display = 'none';
@@ -1177,6 +1330,7 @@
     let svc = 'NONE';
     if (group === 'adult') svc = document.getElementById('adultService').value;
     else if (group === 'teen') svc = document.getElementById('teenService').value;
+    else if (group === 'kids') svc = document.getElementById('kidsService').value;
 
     const hidden = document.getElementById('haircutType');
     const card = document.getElementById('serviceIncludesCard');
@@ -1286,17 +1440,18 @@
         return `${displayH}:${min.toString().padStart(2, "0")} ${ampm}`;
       }
 
+      const SLOT_INTERVAL = 35; // fixed 35-minute slot intervals
       let t = openMinutes;
       while (t + duration <= closeMinutes + 1) {
         const end = t + duration;
 
-        if (isToday && t <= currentMinutes) { t = end; continue; }
+        if (isToday && t <= currentMinutes) { t += SLOT_INTERVAL; continue; }
 
         const blockingRange = unavailableRanges.find(r => !(end <= r.start || t >= r.end));
         if (blockingRange) { t = blockingRange.end; continue; }
 
         const bookedConflict = bookings.some(b => !(end <= b.start || t >= b.end));
-        if (bookedConflict) { t = end; continue; }
+        if (bookedConflict) { t += SLOT_INTERVAL; continue; }
 
         const label = `${formatMins(t)} - ${formatMins(end)}`;
         let option = document.createElement("option");
@@ -1304,7 +1459,7 @@
         option.textContent = label;
         timeSelect.appendChild(option);
 
-        t = end;
+        t += SLOT_INTERVAL;
       }
 
       if (timeSelect.options.length === 1) {
