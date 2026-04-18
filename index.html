@@ -593,7 +593,13 @@
     <input type="hidden" id="haircutType" value="NONE"/>
 
     <!-- Service / Pricing Card -->
-    <div id="serviceIncludesCard" style="display:none; margin-bottom:14px; border-radius:8px; overflow:hidden; border:1px solid var(--accent); background:#1e1e1e;"></div>
+    <div id="serviceIncludesCard" style="display:none; margin-bottom:8px; border-radius:8px; overflow:hidden; border:1px solid var(--accent); background:#1e1e1e;"></div>
+
+    <!-- Selected items summary -->
+    <div id="selectionSummary" style="display:none; margin-bottom:14px; padding:10px 12px; background:#111; border:1px solid var(--accent); border-radius:6px;">
+      <div id="selectionSummaryTitle" style="font-family:'Bebas Neue',cursive;letter-spacing:1.5px;font-size:13px;color:var(--accent);margin-bottom:5px;">✔ YOUR SELECTION:</div>
+      <div id="selectionSummaryText"></div>
+    </div>
 
     <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
 
@@ -846,9 +852,16 @@
 
   function getSelectedServices() {
     const haircut = document.getElementById('haircutType')?.value || "NONE";
-    let services = [];
-    if (haircut && haircut !== 'NONE') services.push(haircut);
-    return services.length > 0 ? services.join(', ') : 'No services selected';
+    if (!haircut || haircut === 'NONE') return 'No services selected';
+
+    const def = pricingCardDefs[haircut];
+    const packageLabel = def ? def.label : haircut;
+
+    const parts = [packageLabel];
+    if (selectedCutItem) parts.push('Cut: ' + selectedCutItem);
+    selectedAddons.forEach(a => parts.push('Add-on: ' + a));
+
+    return parts.join(' | ');
   }
 
   function getSelectedServiceDuration() {
@@ -873,85 +886,267 @@
 
   // ========== AGE GROUP / PRICING CARD LOGIC ==========
 
-  // Pricing card HTML per group/service
-  const pricingCards = {
+  // ========== SELECTION TRACKING ==========
+  // Tracks which cut + add-ons the user has tapped
+  let selectedCutItem = null;     // only 1 cut allowed
+  let selectedAddons = new Set(); // multiple add-ons allowed
 
-    "Celebrity Premium Cut": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">⭐ ADULT 18+ — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $3,000</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
-        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
-        ${["Eyebrows","Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-      </div>`,
+  function toggleCut(el, name) {
+    // Deselect previous cut
+    document.querySelectorAll('.cut-item.selected').forEach(e => e.classList.remove('selected'));
+    if (selectedCutItem === name) {
+      selectedCutItem = null;
+    } else {
+      selectedCutItem = name;
+      el.classList.add('selected');
+    }
+    updateSelectionSummary();
+  }
 
-    "Celebrity Regular Cut": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ ADULT 18+ — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $2,500</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
-        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
-        ${["Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-      </div>`,
+  function toggleAddon(el, name) {
+    if (selectedAddons.has(name)) {
+      selectedAddons.delete(name);
+      el.classList.remove('selected');
+    } else {
+      selectedAddons.add(name);
+      el.classList.add('selected');
+    }
+    updateSelectionSummary();
+  }
 
-    "adult-custom": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ ADULT 18+ — APPOINTMENT PRICE LIST</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts:</div>
-        ${[["All Round Fade","$2,000"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
-        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Add-Ons:</div>
-        ${[["Line Up","$1,800"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$500"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
-      </div>`,
+  function updateSelectionSummary() {
+    const summaryBox = document.getElementById('selectionSummary');
+    const summaryText = document.getElementById('selectionSummaryText');
+    if (!summaryBox || !summaryText) return;
+    const parts = [];
+    if (selectedCutItem) parts.push('✂ ' + selectedCutItem);
+    selectedAddons.forEach(a => parts.push('+ ' + a));
+    if (parts.length === 0) {
+      summaryBox.style.display = 'none';
+      summaryText.innerHTML = '';
+    } else {
+      summaryBox.style.display = 'block';
+      summaryText.innerHTML = parts.map(p => `<span style="display:inline-block;background:#2a2a2a;border:1px solid var(--accent);border-radius:4px;padding:3px 8px;margin:3px 3px 3px 0;font-size:12px;color:var(--accent);font-weight:700;">${p}</span>`).join('');
+    }
+  }
 
-    "Teenage Premium Cut": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">⭐ TEEN 13–17 — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $2,000</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
-        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
-        ${["Eyebrows","Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
-      </div>`,
+  function clearSelections() {
+    selectedCutItem = null;
+    selectedAddons.clear();
+    document.querySelectorAll('.cut-item.selected, .addon-item.selected').forEach(e => e.classList.remove('selected'));
+    updateSelectionSummary();
+  }
 
-    "teen-custom": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ TEEN 13–17 — APPOINTMENT PRICE LIST</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts:</div>
-        ${[["All Round Fade","$"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
-        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Add-Ons:</div>
-        ${[["Line Up","$"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
-      </div>`,
+  // Returns the full service string sent to admin
+  function getSelectedItemsString(packageLabel) {
+    const parts = [];
+    if (packageLabel) parts.push(packageLabel);
+    if (selectedCutItem) parts.push('Cut: ' + selectedCutItem);
+    selectedAddons.forEach(a => parts.push('Add-on: ' + a));
+    return parts.join(' | ');
+  }
 
-    "Kids Cut": `
-      <div style="background:var(--accent);padding:10px 14px;">
-        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ KIDS 3–12 — APPOINTMENT PRICE LIST</span>
-      </div>
-      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
-        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts &amp; Add-Ons:</div>
-        ${[["All Round Fade","$"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"],["Line Up","$"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
-      </div>`
+  // ========== PRICING CARD BUILDER ==========
+  // Shared CSS injected once
+  (function injectCardStyles() {
+    const s = document.createElement('style');
+    s.textContent = `
+      .cut-item, .addon-item {
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(200,168,75,0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.15s, border-color 0.15s;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .cut-item:hover, .addon-item:hover { background: rgba(200,168,75,0.08); }
+      .cut-item.selected { background: rgba(200,168,75,0.18); border-left: 3px solid var(--accent); }
+      .addon-item.selected { background: rgba(200,168,75,0.14); border-left: 3px solid #e0c060; }
+      .item-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; display:inline-block; }
+      .item-label { display:flex; align-items:center; gap:8px; font-size:13px; color:#ddd; font-family:'Barlow',sans-serif; }
+      .item-price { font-size:12px; color:var(--accent); font-weight:700; white-space:nowrap; margin-left:8px; }
+      .item-check { font-size:14px; margin-left:6px; color:var(--accent); }
+      .card-section-title { margin:10px 0 4px; color:var(--accent); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:0 2px; }
+      .tap-hint { font-size:11px; color:#888; text-align:center; padding:6px 0 2px; font-style:italic; }
+      #selectionSummary { margin-top:8px; padding:10px 12px; background:#111; border:1px solid var(--accent); border-radius:6px; display:none; }
+      #selectionSummaryTitle { font-family:'Bebas Neue',cursive; letter-spacing:1.5px; font-size:13px; color:var(--accent); margin-bottom:5px; }
+    `;
+    document.head.appendChild(s);
+  })();
+
+  function buildCutRow(name, price, isAddon) {
+    const cls = isAddon ? 'addon-item' : 'cut-item';
+    const dotColor = isAddon ? '#e0c060' : 'var(--accent)';
+    const fn = isAddon ? `toggleAddon(this,'${name.replace(/'/g,"\\'")}')` : `toggleCut(this,'${name.replace(/'/g,"\\'")}')`;
+    const priceStr = price && price !== '$' ? `<span class="item-price">${price}</span>` : '';
+    return `<div class="${cls}" onclick="${fn}">
+      <span class="item-label"><span class="item-dot" style="background:${dotColor};"></span>${name}${priceStr}</span>
+      <span class="item-check">☐</span>
+    </div>`;
+  }
+
+  // Override selected check icon via event delegation
+  document.addEventListener('click', function(e) {
+    const row = e.target.closest('.cut-item, .addon-item');
+    if (!row) return;
+    // update checkmark icons
+    row.closest('#serviceIncludesCard')?.querySelectorAll('.cut-item .item-check, .addon-item .item-check').forEach(ic => {
+      ic.textContent = ic.closest('.cut-item, .addon-item').classList.contains('selected') ? '✔' : '☐';
+    });
+  });
+
+  function buildPricingCard(headerHTML, sections) {
+    // sections = [{title, items:[{name,price,isAddon}], isMutex}]
+    let html = `<div style="background:var(--accent);padding:10px 14px;">
+      <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:14px;color:#1a1a1a;">${headerHTML}</span>
+    </div>
+    <div style="padding:8px 12px 10px;">
+      <div class="tap-hint">👆 Tap items below to select what you want</div>`;
+    sections.forEach(sec => {
+      if (sec.title) html += `<div class="card-section-title">${sec.title}</div>`;
+      sec.items.forEach(it => { html += buildCutRow(it.name, it.price, it.isAddon); });
+    });
+    html += `</div>`;
+    return html;
+  }
+
+  // Card definitions — all items are now clickable rows
+  const pricingCardDefs = {
+
+    "Celebrity Premium Cut": {
+      label: "Adult 18+ — Celebrity Premium Cut ($3,000)",
+      html: () => buildPricingCard('⭐ ADULT 18+ — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $3,000', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:''},
+          {name:'Taper Fade',price:''},
+          {name:'One Level',price:''},
+          {name:'Bald Cut',price:''},
+          {name:'Mohawk',price:''},
+          {name:'Flat Top',price:''},
+        ]},
+        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
+          {name:'Eyebrows',price:'',isAddon:true},
+          {name:'Line Up',price:'',isAddon:true},
+          {name:'Black Dye',price:'',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Celebrity Regular Cut": {
+      label: "Adult 18+ — Celebrity Regular Cut ($2,500)",
+      html: () => buildPricingCard('✂ ADULT 18+ — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $2,500', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:''},
+          {name:'Taper Fade',price:''},
+          {name:'One Level',price:''},
+          {name:'Bald Cut',price:''},
+          {name:'Mohawk',price:''},
+          {name:'Flat Top',price:''},
+        ]},
+        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
+          {name:'Line Up',price:'',isAddon:true},
+          {name:'Black Dye',price:'',isAddon:true},
+        ]}
+      ])
+    },
+
+    "adult-custom": {
+      label: "Adult 18+ — Build Your Own Cut",
+      html: () => buildPricingCard('✂ ADULT 18+ — APPOINTMENT PRICE LIST', [
+        { title: 'Cuts (pick one):', items: [
+          {name:'All Round Fade',price:'$2,000'},
+          {name:'Taper Fade',price:'$'},
+          {name:'One Level',price:'$'},
+          {name:'Bald Cut',price:'$'},
+          {name:'Mohawk',price:'$'},
+          {name:'Flat Top',price:'$'},
+        ]},
+        { title: 'Add-Ons (pick any):', items: [
+          {name:'Line Up',price:'$1,800',isAddon:true},
+          {name:'Custom Design',price:'$100+',isAddon:true},
+          {name:'Black Dye',price:'$',isAddon:true},
+          {name:'Eyebrows',price:'$500',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Teenage Premium Cut": {
+      label: "Teen 13–17 — Celebrity Premium Cut ($2,000)",
+      html: () => buildPricingCard('⭐ TEEN 13–17 — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $2,000', [
+        { title: 'Cut of Choice (pick one):', items: [
+          {name:'All Round Fade',price:''},
+          {name:'Taper Fade',price:''},
+          {name:'One Level',price:''},
+          {name:'Bald Cut',price:''},
+          {name:'Mohawk',price:''},
+          {name:'Flat Top',price:''},
+        ]},
+        { title: 'PLUS+ Add-ons Included (tap to confirm):', items: [
+          {name:'Eyebrows',price:'',isAddon:true},
+          {name:'Line Up',price:'',isAddon:true},
+          {name:'Black Dye',price:'',isAddon:true},
+        ]}
+      ])
+    },
+
+    "teen-custom": {
+      label: "Teen 13–17 — Build Your Own Cut",
+      html: () => buildPricingCard('✂ TEEN 13–17 — APPOINTMENT PRICE LIST', [
+        { title: 'Cuts (pick one):', items: [
+          {name:'All Round Fade',price:'$'},
+          {name:'Taper Fade',price:'$'},
+          {name:'One Level',price:'$'},
+          {name:'Bald Cut',price:'$'},
+          {name:'Mohawk',price:'$'},
+          {name:'Flat Top',price:'$'},
+        ]},
+        { title: 'Add-Ons (pick any):', items: [
+          {name:'Line Up',price:'$',isAddon:true},
+          {name:'Custom Design',price:'$100+',isAddon:true},
+          {name:'Black Dye',price:'$',isAddon:true},
+          {name:'Eyebrows',price:'$',isAddon:true},
+        ]}
+      ])
+    },
+
+    "Kids Cut": {
+      label: "Kids 3–12 — Cut",
+      html: () => buildPricingCard('✂ KIDS 3–12 — APPOINTMENT PRICE LIST', [
+        { title: 'Cuts (pick one):', items: [
+          {name:'All Round Fade',price:'$'},
+          {name:'Taper Fade',price:'$'},
+          {name:'One Level',price:'$'},
+          {name:'Bald Cut',price:'$'},
+          {name:'Mohawk',price:'$'},
+          {name:'Flat Top',price:'$'},
+        ]},
+        { title: 'Add-Ons (pick any):', items: [
+          {name:'Line Up',price:'$',isAddon:true},
+          {name:'Custom Design',price:'$100+',isAddon:true},
+          {name:'Black Dye',price:'$',isAddon:true},
+          {name:'Eyebrows',price:'$',isAddon:true},
+        ]}
+      ])
+    }
   };
+
+  // Compatibility shim — old code referenced pricingCards
+  const pricingCards = {};
 
   function onAgeGroupChange() {
     const group = document.getElementById('ageGroup').value;
-    // hide all sub-pickers
     document.getElementById('adultServiceWrap').style.display = 'none';
     document.getElementById('teenServiceWrap').style.display = 'none';
-    // reset sub-pickers
     document.getElementById('adultService').value = 'NONE';
     document.getElementById('teenService').value = 'NONE';
 
     const card = document.getElementById('serviceIncludesCard');
     const hidden = document.getElementById('haircutType');
+    clearSelections();
 
     if (group === 'adult') {
       document.getElementById('adultServiceWrap').style.display = 'block';
@@ -965,7 +1160,8 @@
       card.innerHTML = '';
     } else if (group === 'kids') {
       hidden.value = 'Kids Cut';
-      card.innerHTML = pricingCards['Kids Cut'];
+      const def = pricingCardDefs['Kids Cut'];
+      card.innerHTML = def.html();
       card.style.display = 'block';
     } else {
       hidden.value = 'NONE';
@@ -984,11 +1180,12 @@
 
     const hidden = document.getElementById('haircutType');
     const card = document.getElementById('serviceIncludesCard');
+    clearSelections();
 
     hidden.value = (svc === 'NONE') ? 'NONE' : svc;
 
-    if (svc && svc !== 'NONE' && pricingCards[svc]) {
-      card.innerHTML = pricingCards[svc];
+    if (svc && svc !== 'NONE' && pricingCardDefs[svc]) {
+      card.innerHTML = pricingCardDefs[svc].html();
       card.style.display = 'block';
     } else {
       card.style.display = 'none';
@@ -1263,6 +1460,11 @@
         if (!response) return;
 
         document.querySelector("#bookingSection form").reset();
+        clearSelections();
+        document.getElementById('adultServiceWrap').style.display = 'none';
+        document.getElementById('teenServiceWrap').style.display = 'none';
+        document.getElementById('serviceIncludesCard').style.display = 'none';
+        document.getElementById('serviceIncludesCard').innerHTML = '';
         document.getElementById("estimateTimeMessage").innerHTML = "";
         document.getElementById("selectedTime").innerHTML = "<option value=''>Pick date & service first</option>";
         document.querySelector("#bookingModal h3").style.display = "none";
