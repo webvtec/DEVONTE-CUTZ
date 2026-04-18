@@ -1142,10 +1142,10 @@
           {name:'Eyebrows',price:'',isAddon:true},
           {name:'Line Up',price:'',isAddon:true},
           {name:'Head Dye',price:'',isAddon:true},
+          {name:'Beard Dye',price:'NO EXTRA COST',isAddon:true},
+          {name:'Warm Towel',price:'NO EXTRA COST',isAddon:true},
         ]},
         { title: 'Optional Extra:', items: [
-          {name:'Beard Dye',price:'$200',isAddon:true},
-          {name:'Warm Towel',price:'$500',isAddon:true},
           {name:'Custom Design',price:'$200+',isAddon:true},
         ]}
       ])
@@ -1206,10 +1206,10 @@
           {name:'Eyebrows',price:'',isAddon:true},
           {name:'Line Up',price:'',isAddon:true},
           {name:'Head Dye',price:'',isAddon:true},
+          {name:'Beard Dye',price:'NO EXTRA COST',isAddon:true},
+          {name:'Warm Towel',price:'NO EXTRA COST',isAddon:true},
         ]},
         { title: 'Optional Extra:', items: [
-          {name:'Beard Dye',price:'$200',isAddon:true},
-          {name:'Warm Towel',price:'$500',isAddon:true},
           {name:'Custom Design',price:'$200+',isAddon:true},
         ]}
       ])
@@ -1464,19 +1464,21 @@
       }
 
       const SLOT_INTERVAL = 35; // fixed 35-minute slot intervals
+      const SLOT_DISPLAY_DURATION = 35; // always show 35-min window on label
       let t = openMinutes;
-      while (t + duration <= closeMinutes + 1) {
-        const end = t + duration;
+      while (t + SLOT_INTERVAL <= closeMinutes + 1) {
+        const slotEnd = t + SLOT_DISPLAY_DURATION;
+        const bookingEnd = t + duration; // used only for conflict checking
 
         if (isToday && t <= currentMinutes) { t += SLOT_INTERVAL; continue; }
 
-        const blockingRange = unavailableRanges.find(r => !(end <= r.start || t >= r.end));
+        const blockingRange = unavailableRanges.find(r => !(bookingEnd <= r.start || t >= r.end));
         if (blockingRange) { t = blockingRange.end; continue; }
 
-        const bookedConflict = bookings.some(b => !(end <= b.start || t >= b.end));
+        const bookedConflict = bookings.some(b => !(bookingEnd <= b.start || t >= b.end));
         if (bookedConflict) { t += SLOT_INTERVAL; continue; }
 
-        const label = `${formatMins(t)} - ${formatMins(end)}`;
+        const label = `${formatMins(t)} - ${formatMins(slotEnd)}`;
         let option = document.createElement("option");
         option.value = formatMins(t);
         option.textContent = label;
