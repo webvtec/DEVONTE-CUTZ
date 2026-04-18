@@ -1614,6 +1614,11 @@
       return;
     }
 
+    if (!selectedCutItem) {
+      alert('Please select your Cut of Choice before booking.');
+      return;
+    }
+
     const bookingNumber = generateBookingNumber(name);
     const duration = getSelectedServiceDuration();
     const total = getSelectedTotal();
