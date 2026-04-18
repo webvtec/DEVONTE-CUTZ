@@ -608,7 +608,7 @@
       <div id="selectionSummaryText"></div>
     </div>
 
-    <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
+    <p id="estimateTimeMessage" style="display:none;"></p>
 
     <button type="submit">BOOK NOW ✂</button>
   </form>
@@ -960,20 +960,7 @@
     return (haircut && haircut !== 'NONE' ? serviceDurations[haircut] : 0) || 30;
   }
 
-  function showEstimateTime() {
-    const haircut = document.getElementById('haircutType').value;
-    const msg = document.getElementById('estimateTimeMessage');
-    if (!haircut || haircut === 'NONE') { msg.innerHTML = ''; return; }
-    const total = serviceDurations[haircut] || 0;
-    if (total > 0) {
-      const h = Math.floor(total / 60);
-      const m = total % 60;
-      let str = '';
-      if (h) str += `${h} hour${h > 1 ? 's' : ''}`;
-      if (m) { if (str) str += ' and '; str += `${m} minute${m > 1 ? 's' : ''}`; }
-      msg.innerHTML = `⏱ Estimated Duration: ~${str}`;
-    }
-  }
+  function showEstimateTime() { /* duration display removed */ }
 
   // ========== ADDON PRICES ==========
   const addonPrices = {
@@ -1146,6 +1133,9 @@
           {name:'Warm Towel',price:'NO EXTRA COST',isAddon:true},
         ]},
         { title: 'Optional Extra:', items: [
+          {name:'Dye',price:'$300',isAddon:true},
+          {name:'Beard',price:'$200',isAddon:true},
+          {name:'Warm Towel',price:'$500',isAddon:true},
           {name:'Custom Design',price:'$200+',isAddon:true},
         ]}
       ])
@@ -1210,6 +1200,9 @@
           {name:'Warm Towel',price:'NO EXTRA COST',isAddon:true},
         ]},
         { title: 'Optional Extra:', items: [
+          {name:'Dye',price:'$300',isAddon:true},
+          {name:'Beard',price:'$200',isAddon:true},
+          {name:'Warm Towel',price:'$500',isAddon:true},
           {name:'Custom Design',price:'$200+',isAddon:true},
         ]}
       ])
