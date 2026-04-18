@@ -812,12 +812,23 @@
       .catch(error => { alert('Logout failed: ' + error.message); });
   }
 
+  function googleSignIn() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    firebase.auth().signInWithPopup(provider)
+      .catch(error => {
+        if (error.code !== 'auth/popup-closed-by-user') {
+          alert('Sign-in failed: ' + error.message);
+        }
+      });
+  }
+
   function handleAuthButtonClick() {
     const user = firebase.auth().currentUser;
     if (user) {
       logoutUser();
     } else {
-      window.location.href = 'login.html';
+      googleSignIn();
     }
   }
 
@@ -1582,9 +1593,7 @@
 
     const user = firebase.auth().currentUser;
     if (!user) {
-      if (confirm("You must be logged in to book an appointment. Click OK to log in.")) {
-        window.location.href = 'login.html';
-      }
+      googleSignIn();
       return;
     }
 
@@ -1732,9 +1741,7 @@
 
     const user = firebase.auth().currentUser;
     if (!user) {
-      if (confirm("You must be logged in to submit a review. Click OK to log in.")) {
-        window.location.href = 'login.html';
-      }
+      googleSignIn();
       return;
     }
 
@@ -1815,7 +1822,7 @@
 
   function deleteReview(docId) {
     const user = firebase.auth().currentUser;
-    if (!user) { window.location.href = 'login.html'; return; }
+    if (!user) { googleSignIn(); return; }
     db.collection('reviews').doc(docId).get().then(doc => {
       if (!doc.exists) { alert("Review not found."); return; }
       if (doc.data().uid !== user.uid) { alert("You can only delete your own reviews."); return; }
@@ -1829,7 +1836,7 @@
   function showUserBookings() {
     const user = firebase.auth().currentUser;
     if (!user) {
-      if (confirm("Please log in to view your bookings. Click OK to log in.")) window.location.href = 'login.html';
+      googleSignIn();
       return;
     }
 
@@ -1915,7 +1922,7 @@
   // ========== CANCEL USER BOOKING ==========
   function cancelUserBooking(bookingId, bookingNumber) {
     const user = firebase.auth().currentUser;
-    if (!user) { window.location.href = 'login.html'; return; }
+    if (!user) { googleSignIn(); return; }
 
     Swal.fire({
       title: 'Cancel Booking?',
