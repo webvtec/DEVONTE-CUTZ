@@ -556,18 +556,43 @@
       <option value="">COMPLETE FORM TO SEE AVAILABLE SLOTS</option>
     </select>
 
-    <!-- Haircut Services -->
-    <label for="haircutType">Haircut:</label>
-    <select id="haircutType" onchange="showEstimateTime(); loadAvailableSlots(); showServiceIncludes();">
+    <!-- Haircut Age Group -->
+    <label for="ageGroup">Haircut:</label>
+    <select id="ageGroup" onchange="onAgeGroupChange();">
       <option value="NONE">NONE</option>
-      <option value="Celebrity Premium Cut">Celebrity Premium Cut — $3,000 (40 mins)</option>
-      <option value="Celebrity Regular Cut">Celebrity Regular Cut — $2,500 (40 mins)</option>
-      <option value="Teenage Premium Cut">Teenage Premium Cut — $2,000 (40 mins, dye inclusive)</option>
-      <option value="Kids Cut">Kids Cut (Age 3–12) — $2,000 (40 mins)</option>
-      <option value="Big Chop Transformation">Big Chop Transformation — $3,500 (40 mins)</option>
+      <option value="adult">ADULT CUT 18+</option>
+      <option value="teen">TEENAGER CUTS 13–17</option>
+      <option value="kids">KIDS CUTS 3–12</option>
     </select>
 
-    <!-- Service Includes Card -->
+    <!-- Adult: service picker -->
+    <div id="adultServiceWrap" style="display:none;">
+      <label for="adultService">Adult Service:</label>
+      <select id="adultService" onchange="onServiceChange();">
+        <option value="NONE">— Select a service —</option>
+        <option value="Celebrity Premium Cut">⭐ Celebrity Premium Cut — $3,000</option>
+        <option value="Celebrity Regular Cut">✂ Celebrity Regular Cut — $2,500</option>
+        <option value="adult-custom">Build your own cut</option>
+      </select>
+    </div>
+
+    <!-- Teen: service picker -->
+    <div id="teenServiceWrap" style="display:none;">
+      <label for="teenService">Teen Service:</label>
+      <select id="teenService" onchange="onServiceChange();">
+        <option value="NONE">— Select a service —</option>
+        <option value="Teenage Premium Cut">⭐ Celebrity Premium Cut — $2,000</option>
+        <option value="teen-custom">Build your own cut</option>
+      </select>
+    </div>
+
+    <!-- Kids: no sub-picker, just price list -->
+    <!-- (kids pricing card shown automatically) -->
+
+    <!-- Hidden field that carries the real service value for booking logic -->
+    <input type="hidden" id="haircutType" value="NONE"/>
+
+    <!-- Service / Pricing Card -->
     <div id="serviceIncludesCard" style="display:none; margin-bottom:14px; border-radius:8px; overflow:hidden; border:1px solid var(--accent); background:#1e1e1e;"></div>
 
     <p id="estimateTimeMessage" style="color:var(--accent2); font-weight:bold; font-size:14px;"></p>
@@ -814,7 +839,9 @@
     "Hair Wash": 15,
     "Scalp Treatment": 30,
     "Kid Package": 40,
-    "Big Chop Transformation": 40
+    "Big Chop Transformation": 40,
+    "adult-custom": 40,
+    "teen-custom": 40
   };
 
   function getSelectedServices() {
@@ -844,60 +871,135 @@
     }
   }
 
-  // ========== SERVICE INCLUDES ==========
-  const serviceIncludes = {
-    "Celebrity Premium Cut": {
-      icon: "✂",
-      color: "#C8A84B",
-      items: ["Full Fade", "Dye Inclusive", "Eyebrow Trim"]
-    },
-    "Celebrity Regular Cut": {
-      icon: "✂",
-      color: "#C8A84B",
-      items: ["Taper Fade", "Regular Cut", "Dye Only"]
-    },
-    "Teenage Premium Cut": {
-      icon: "✂",
-      color: "#C8A84B",
-      items: ["Full Fade", "Dye Inclusive"]
-    },
-    "Kids Cut": {
-      icon: "✂",
-      color: "#C8A84B",
-      items: ["Age 3–12", "Clean & Neat Cut", "Kid-Friendly Service"]
-    },
-    "Big Chop Transformation": {
-      icon: "✂",
-      color: "#C8A84B",
-      items: ["Full Hair Transformation", "Big Chop Style", "Personalised Consultation"]
-    }
+  // ========== AGE GROUP / PRICING CARD LOGIC ==========
+
+  // Pricing card HTML per group/service
+  const pricingCards = {
+
+    "Celebrity Premium Cut": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">⭐ ADULT 18+ — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $3,000</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
+        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
+        ${["Eyebrows","Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+      </div>`,
+
+    "Celebrity Regular Cut": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ ADULT 18+ — MEN CELEBRITY REGULAR CUT &nbsp;|&nbsp; $2,500</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
+        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
+        ${["Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+      </div>`,
+
+    "adult-custom": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ ADULT 18+ — APPOINTMENT PRICE LIST</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts:</div>
+        ${[["All Round Fade","$2,000"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
+        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Add-Ons:</div>
+        ${[["Line Up","$1,800"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$500"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
+      </div>`,
+
+    "Teenage Premium Cut": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">⭐ TEEN 13–17 — MEN CELEBRITY PREMIUM CUT &nbsp;|&nbsp; $2,000</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">CUT OF CHOICE INCLUDES:</div>
+        ${["All Round Fade","Taper Fade","One Level","Bald Cut","Mohawk","Flat Top"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">PLUS+ Add-ons Included:</div>
+        ${["Eyebrows","Line Up","Black Dye"].map(i=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${i}</div>`).join('')}
+      </div>`,
+
+    "teen-custom": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ TEEN 13–17 — APPOINTMENT PRICE LIST</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts:</div>
+        ${[["All Round Fade","$"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
+        <div style="margin-top:10px;margin-bottom:4px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Add-Ons:</div>
+        ${[["Line Up","$"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:#e0c060;display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
+      </div>`,
+
+    "Kids Cut": `
+      <div style="background:var(--accent);padding:10px 14px;">
+        <span style="font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px;color:#1a1a1a;">✂ KIDS 3–12 — APPOINTMENT PRICE LIST</span>
+      </div>
+      <div style="padding:10px 14px 6px;font-size:13px;color:#ccc;font-family:'Barlow',sans-serif;">
+        <div style="margin-bottom:6px;color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Cuts &amp; Add-Ons:</div>
+        ${[["All Round Fade","$"],["Taper Fade","$"],["One Level","$"],["Bald Cut","$"],["Mohawk","$"],["Flat Top","$"],["Line Up","$"],["Custom Design","$100+"],["Black Dye","$"],["Eyebrows","$"]].map(([n,p])=>`<div style="padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.1);display:flex;justify-content:space-between;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;"></span>${n}</span><span style="color:var(--accent);font-weight:700;">${p}</span></div>`).join('')}
+      </div>`
   };
 
-  function showServiceIncludes() {
-    const haircut = document.getElementById('haircutType').value;
+  function onAgeGroupChange() {
+    const group = document.getElementById('ageGroup').value;
+    // hide all sub-pickers
+    document.getElementById('adultServiceWrap').style.display = 'none';
+    document.getElementById('teenServiceWrap').style.display = 'none';
+    // reset sub-pickers
+    document.getElementById('adultService').value = 'NONE';
+    document.getElementById('teenService').value = 'NONE';
+
     const card = document.getElementById('serviceIncludesCard');
-    if (!haircut || haircut === 'NONE' || !serviceIncludes[haircut]) {
+    const hidden = document.getElementById('haircutType');
+
+    if (group === 'adult') {
+      document.getElementById('adultServiceWrap').style.display = 'block';
+      hidden.value = 'NONE';
       card.style.display = 'none';
       card.innerHTML = '';
-      return;
+    } else if (group === 'teen') {
+      document.getElementById('teenServiceWrap').style.display = 'block';
+      hidden.value = 'NONE';
+      card.style.display = 'none';
+      card.innerHTML = '';
+    } else if (group === 'kids') {
+      hidden.value = 'Kids Cut';
+      card.innerHTML = pricingCards['Kids Cut'];
+      card.style.display = 'block';
+    } else {
+      hidden.value = 'NONE';
+      card.style.display = 'none';
+      card.innerHTML = '';
     }
-    const info = serviceIncludes[haircut];
-    const itemsHTML = info.items.map(item => `
-      <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(200,168,75,0.1);">
-        <span style="width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; display:inline-block;"></span>
-        <span style="font-size:14px; color:#e0e0e0; font-family:'Barlow',sans-serif;">${item}</span>
-      </div>
-    `).join('');
-    card.innerHTML = `
-      <div style="background:var(--accent); padding:9px 14px; display:flex; align-items:center; gap:8px;">
-        <span style="font-size:16px;">${info.icon}</span>
-        <span style="font-family:'Bebas Neue',cursive; letter-spacing:2px; font-size:15px; color:#1a1a1a;">INCLUDES</span>
-      </div>
-      <div style="padding:10px 14px 4px;">
-        ${itemsHTML}
-      </div>
-    `;
-    card.style.display = 'block';
+    showEstimateTime();
+    loadAvailableSlots();
+  }
+
+  function onServiceChange() {
+    const group = document.getElementById('ageGroup').value;
+    let svc = 'NONE';
+    if (group === 'adult') svc = document.getElementById('adultService').value;
+    else if (group === 'teen') svc = document.getElementById('teenService').value;
+
+    const hidden = document.getElementById('haircutType');
+    const card = document.getElementById('serviceIncludesCard');
+
+    hidden.value = (svc === 'NONE') ? 'NONE' : svc;
+
+    if (svc && svc !== 'NONE' && pricingCards[svc]) {
+      card.innerHTML = pricingCards[svc];
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+      card.innerHTML = '';
+    }
+    showEstimateTime();
+    loadAvailableSlots();
+  }
+
+  function showServiceIncludes() {
+    // kept as no-op for compatibility — logic now in onAgeGroupChange / onServiceChange
   }
 
   // ========== TIME UTILS ==========
