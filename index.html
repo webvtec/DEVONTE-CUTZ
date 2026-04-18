@@ -1653,14 +1653,16 @@
         const telegramBotToken = "8646321293:AAHMEmEBJ5Ly-YGHNxsDIQnbL9rE4lUaiW8";
         const telegramChatId = "1697949012";
 
-        return fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+        fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ chat_id: telegramChatId, text: message, parse_mode: "HTML" })
-        });
+        }).catch(() => {}); // Telegram failure should never block confirmation
+
+        return docRef;
       })
-      .then((response) => {
-        if (!response) return;
+      .then((docRef) => {
+        if (!docRef) return;
 
         document.querySelector("#bookingSection form").reset();
         clearSelections();
