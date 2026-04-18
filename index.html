@@ -8,7 +8,7 @@
 <meta name="robots" content="index, follow, max-image-preview:large">
 <!-- SEO & Description -->
 <meta name="description" content="Jerome Celebrity Kutt – Professional barber offering precision fades, skin fades, beard work, kids cuts and special designs. Book your appointment today.">
-<meta name="keywords" content="Jerome Celebrity Kutt, Jerome barber, Jerome Celebrity Kutt Jamaica, Jerome barber Kingston, celebrity barber Jamaica, best barber Kingston Jamaica, barber shop Kingston, barber near me Kingston, men haircut Jamaica, fade haircut Jamaica, skin fade Kingston, taper fade Jamaica, bald fade Jamaica, lineup Jamaica, shape up Kingston, edge up Jamaica, beard trim Jamaica, beard grooming Kingston, kids haircut Jamaica, boys fade Kingston, book barber Jamaica, barber appointment Kingston, hair design Jamaica, waves haircut Jamaica, barber New Kingston, barber Half Way Tree, barber Liguanea, KGN barber, walk in barber Jamaica, jeromecelebritykutts">
+<meta name="keywords" content="Jerome Celebrity Kutt, Jerome barber, Jerome Celebrity Kutt Jamaica, celebrity barber Jamaica, barber Jamaica, fade haircut Jamaica, skin fade Jamaica, beard trim Jamaica, kids haircut Jamaica, book barber Jamaica, best barber Jamaica, Jerome barber shop">
 <meta name="author" content="Jerome Celebrity Kutt">
 <link rel="canonical" href="https://jeromecelebritykutt.com/">
 <!-- Favicon -->
@@ -512,8 +512,8 @@
 
   <div class="separator-line"></div>
 
-  <a onclick="logoutUser(); closeMenu();" style="display:block; text-align:center; margin:10px auto; padding:8px 10px; background-color:#c0392b; color:white; border-radius:6px; cursor:pointer; text-decoration:none; width:85%; font-weight:bold; font-size:13px;">LOGOUT</a>
-  <a class="admin-button" onclick="login(); closeMenu();" style="display:block; text-align:center; margin:8px auto; padding:8px 10px; border-radius:6px; text-decoration:none; width:85%; font-weight:bold; font-size:13px;">ADMIN</a>
+  <a id="logoutBtn" onclick="logoutUser(); closeMenu();" style="display:block; text-align:center; margin:10px auto; padding:8px 10px; background-color:#c0392b; color:white; border-radius:6px; cursor:pointer; text-decoration:none; width:85%; font-weight:bold; font-size:13px;">LOGOUT</a>
+  <a class="admin-button" id="adminLoginBtn" onclick="login(); closeMenu();" style="display:block; text-align:center; margin:8px auto; padding:8px 10px; border-radius:6px; text-decoration:none; width:85%; font-weight:bold; font-size:13px;">SewyjnBazRdI19ZHuaqBlx7e8zG2</a>
 </div>
 
 <!-- Booking Confirmation Modal -->
@@ -761,7 +761,20 @@
   firebase.auth().onAuthStateChanged(user => {
     currentUser = user || null;
     loadReviews(currentUser);
+    updateAuthButtons(currentUser);
   });
+
+  function updateAuthButtons(user) {
+    const logoutBtn = document.getElementById('logoutBtn');
+    const loginBtn = document.getElementById('adminLoginBtn');
+    if (user) {
+      if (logoutBtn) logoutBtn.style.display = 'block';
+      if (loginBtn) loginBtn.style.display = 'none';
+    } else {
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (loginBtn) loginBtn.style.display = 'block';
+    }
+  }
 
   // ========== AUTH ==========
   // AUTHORISED ADMIN UID — set this to the Google account UID of your admin
@@ -807,7 +820,7 @@
 
   function logoutUser() {
     firebase.auth().signOut()
-      .then(() => { window.location.href = 'login.html'; })
+      .then(() => { updateAuthButtons(null); })
       .catch(error => { alert('Logout failed: ' + error.message); });
   }
 
@@ -1557,7 +1570,7 @@
     const user = firebase.auth().currentUser;
     if (!user) {
       if (confirm("You must be logged in to book an appointment. Click OK to log in.")) {
-        window.location.href = 'login.html';
+        document.getElementById('adminLoginModal').style.display = 'flex';
       }
       return;
     }
@@ -1707,7 +1720,7 @@
     const user = firebase.auth().currentUser;
     if (!user) {
       if (confirm("You must be logged in to submit a review. Click OK to log in.")) {
-        window.location.href = 'login.html';
+        document.getElementById('adminLoginModal').style.display = 'flex';
       }
       return;
     }
@@ -1789,7 +1802,7 @@
 
   function deleteReview(docId) {
     const user = firebase.auth().currentUser;
-    if (!user) { window.location.href = 'login.html'; return; }
+    if (!user) { document.getElementById('adminLoginModal').style.display = 'flex'; return; }
     db.collection('reviews').doc(docId).get().then(doc => {
       if (!doc.exists) { alert("Review not found."); return; }
       if (doc.data().uid !== user.uid) { alert("You can only delete your own reviews."); return; }
@@ -1803,7 +1816,7 @@
   function showUserBookings() {
     const user = firebase.auth().currentUser;
     if (!user) {
-      if (confirm("Please log in to view your bookings. Click OK to log in.")) window.location.href = 'login.html';
+      if (confirm("Please log in to view your bookings. Click OK to log in.")) document.getElementById('adminLoginModal').style.display = 'flex';
       return;
     }
 
@@ -1889,7 +1902,7 @@
   // ========== CANCEL USER BOOKING ==========
   function cancelUserBooking(bookingId, bookingNumber) {
     const user = firebase.auth().currentUser;
-    if (!user) { window.location.href = 'login.html'; return; }
+    if (!user) { document.getElementById('adminLoginModal').style.display = 'flex'; return; }
 
     Swal.fire({
       title: 'Cancel Booking?',
