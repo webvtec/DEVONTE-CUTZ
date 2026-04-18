@@ -1449,6 +1449,7 @@
     const closeMinutes = convertToMinutes(business.close);
 
     try {
+      const SLOT_INTERVAL = 35; // fixed 35-minute slot intervals
       const snapshot = await db.collection("bookings").where("date", "==", date).get();
       const bookings = snapshot.docs.map(doc => {
         const bookedTime = convertToMinutes(normalizeTimeStr(doc.data().time));
@@ -1484,7 +1485,6 @@
         return `${displayH}:${min.toString().padStart(2, "0")} ${ampm}`;
       }
 
-      const SLOT_INTERVAL = 35; // fixed 35-minute slot intervals
       const SLOT_DISPLAY_DURATION = 35; // always show 35-min window on label
       let t = openMinutes;
       while (t + SLOT_INTERVAL <= closeMinutes + 1) {
