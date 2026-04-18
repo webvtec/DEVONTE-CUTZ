@@ -768,7 +768,7 @@
   // ========== AUTH ==========
   // AUTHORISED ADMIN UID — set this to the Google account UID of your admin
   // Find it in Firebase Console → Authentication → Users after first login
-  const ADMIN_UID = "nIwRfcHc7Of6ahl0Qj0M2QWtPTc2";
+  const ADMIN_UID = "SewyjnBazRdI19ZHuaqBlx7e8zG2";
 
   function login() {
     document.getElementById('adminLoginModal').style.display = 'flex';
@@ -789,14 +789,14 @@
     firebase.auth().signInWithPopup(provider)
       .then((result) => {
         const user = result.user;
-        // Check UID matches the authorised admin
         if (user.uid !== ADMIN_UID) {
-          // Not the admin — sign them out immediately
-          firebase.auth().signOut();
-          msg.textContent = "Access denied. This Google account is not authorised as admin.";
-          msg.style.display = "block";
-          return;
+          // UID doesn't match — force sign out, block all access
+          return firebase.auth().signOut().then(() => {
+            msg.textContent = "Access denied. This Google account is not authorised as admin.";
+            msg.style.display = "block";
+          });
         }
+        // UID confirmed — only now allow dashboard access
         closeAdminModal();
         window.location.href = 'dashboard.html';
       })
