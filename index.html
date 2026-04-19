@@ -807,26 +807,30 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        const user = result.user;
-        if (user.uid !== ADMIN_UID) {
-          // UID doesn't match — force sign out, block all access
-          return firebase.auth().signOut().then(() => {
-            msg.textContent = "Access denied. This Google account is not authorised as admin.";
-            msg.style.display = "block";
-          });
-        }
-        // UID confirmed — only now allow dashboard access
-        closeAdminModal();
-        window.location.href = 'dashboard.html';
-      })
-      .catch((error) => {
-        if (error.code === 'auth/popup-closed-by-user') return;
-        msg.textContent = "Sign-in failed: " + error.message;
-        msg.style.display = "block";
-      });
+    // Use redirect instead of popup — works on Safari and Instagram browser
+    firebase.auth().signInWithRedirect(provider).catch((error) => {
+      msg.textContent = "Sign-in failed: " + error.message;
+      msg.style.display = "block";
+    });
   }
+
+  // Handle redirect result on page load
+  firebase.auth().getRedirectResult().then((result) => {
+    if (!result || !result.user) return;
+    const user = result.user;
+    if (user.uid === ADMIN_UID) {
+      window.location.href = 'dashboard.html';
+    } else {
+      firebase.auth().signOut().then(() => {
+        const msg = document.getElementById('adminLoginMsg');
+        if (msg) {
+          document.getElementById('adminLoginModal').style.display = 'flex';
+          msg.textContent = "Access denied. This Google account is not authorised as admin.";
+          msg.style.display = "block";
+        }
+      });
+    }
+  }).catch(() => {});
 
   function logoutUser() {
     firebase.auth().signOut()
@@ -836,12 +840,9 @@
   function googleSignIn() {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    firebase.auth().signInWithPopup(provider)
-      .catch(error => {
-        if (error.code !== 'auth/popup-closed-by-user') {
-          alert('Sign-in failed: ' + error.message);
-        }
-      });
+    firebase.auth().signInWithRedirect(provider).catch(error => {
+      alert('Sign-in failed: ' + error.message);
+    });
   }
 
   function handleAuthButtonClick() {
@@ -946,8 +947,9 @@
 
         const categoryContainer = document.getElementById(`gallery-${category.replace(/\s+/g,'-')}`);
         categories[category].forEach((imageUrl) => {
+          const cacheBustedUrl = imageUrl.includes('firebasestorage') ? imageUrl + (imageUrl.includes('?') ? '&' : '?') + 'alt=media&t=' + Date.now() : imageUrl;
           categoryContainer.innerHTML += `
-            <div><img src="${imageUrl}" alt="Cut" style="margin-bottom:10px;"></div>
+            <div><img src="${cacheBustedUrl}" alt="Cut" crossorigin="anonymous" style="margin-bottom:10px;"></div>
           `;
         });
       }
